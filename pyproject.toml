@@ -3,4 +3,7 @@ name = "expenseapp"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pydantic>=2.12.5",
+    "sqlalchemy>=2.0.48",
+]
