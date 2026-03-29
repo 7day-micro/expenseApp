@@ -1,6 +1,9 @@
 # Initial schemas
+
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
+from decimal import Decimal
 
 
 class UserSchema(BaseModel):
@@ -18,7 +21,7 @@ class UserCreateSchema(BaseModel):
 
 class ExpenseSchema(BaseModel):
   id : int
-  amount : float
+  amount : Decimal
 
   user_id : int
   category_id : int 
@@ -26,16 +29,16 @@ class ExpenseSchema(BaseModel):
   transaction_date : datetime
   created_at : datetime
   
-  note: string
+  note: str
 
   class Meta:
     from_attributes = True
     
 class ExpenseCreateSchema(BaseModel):
-  amount : int
+  amount : Decimal
   user_id : int
-  category : id
-  transaction_date : date
+  category_id : int
+  transaction_date : datetime
   note : str
   
 class CategorySchema(BaseModel):
