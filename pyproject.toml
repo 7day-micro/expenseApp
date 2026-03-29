@@ -7,3 +7,9 @@ dependencies = [
     "pydantic>=2.12.5",
     "sqlalchemy>=2.0.48",
 ]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "ruff>=0.15.8",
+]
