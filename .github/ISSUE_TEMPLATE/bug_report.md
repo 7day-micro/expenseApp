@@ -1,3 +1,10 @@
+---
+name: Bug report
+about: Report unexpected behavior or a defect
+title: "[Bug] "
+labels: bug
+---
+
 ## Expected Behavior
 
 
