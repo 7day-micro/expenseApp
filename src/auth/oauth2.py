@@ -5,11 +5,9 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-
-
-from db.config import settings
-from db.database import get_db 
-from schemas import User # i have to wait schemas
+from src.db.config import settings
+from src.db.database import get_db 
+from src.models import User 
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
@@ -42,7 +40,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Credenziali non valide o token scaduto",
+        detail="Invalid credentials or expired token",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
@@ -56,7 +54,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     except JWTError:
         raise credentials_exception
         
-    result = await db.execute(select(User).filter(User.id == int(user_id)))
+    #uid
+    result = await db.execute(select(User).filter(User.uid == user_id))
     user = result.scalars().first()
     
     if user is None:
