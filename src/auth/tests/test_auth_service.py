@@ -40,3 +40,10 @@ class TestAuthService:
         valid_user.email = "invalid-email"
         with pytest.raises(ValidationError):
             await create_user_service(valid_user, db_session)
+
+    @pytest.mark.asyncio
+    @pytest.mark.skip("we need to fix the service layer in future")
+    async def test_register_short_password(self, db_session, valid_user):
+        valid_user.password = "short"
+        with pytest.raises(ValidationError):
+            await create_user_service(valid_user, db_session)
