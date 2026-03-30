@@ -4,8 +4,12 @@ from .config import settings
 
 SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.DATABASE_USERNAME}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOSTNAME}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}"
 
-#
-engine = create_async_engine(
+
+def engine_factory(*args, **kwargs):
+    return create_async_engine(*args, **kwargs)
+
+
+engine = engine_factory(
     SQLALCHEMY_DATABASE_URL,
     echo=False,
     pool_size=10,

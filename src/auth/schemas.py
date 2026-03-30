@@ -1,11 +1,11 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 import uuid
 from datetime import datetime
 import re
 
 
 # Data required for user registration (Signup) with strict validation
-class UserCreate(BaseModel):
+class UserCreateSchema(BaseModel):
     username: str = Field(
         ...,
         min_length=3,
@@ -40,8 +40,15 @@ class UserCreate(BaseModel):
             )
         return v
 
+    model_config = ConfigDict(
+        {
+            "from_attributes": True,
+            "extra": "forbid",
+        }
+    )
 
-class UserResponse(BaseModel):
+
+class UserResponseSchema(BaseModel):
     uid: uuid.UUID
     username: str
     email: EmailStr
@@ -49,16 +56,20 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        {
+            "from_attributes": True,
+            "extra": "forbid",
+        }
+    )
 
 
 # JWT Token schema
-class Token(BaseModel):
+class TokenSchema(BaseModel):
     access_token: str
     token_type: str
 
 
 # Token data extraction
-class TokenData(BaseModel):
+class TokenDataSchema(BaseModel):
     user_id: str | None = None

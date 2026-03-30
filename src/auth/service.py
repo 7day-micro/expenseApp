@@ -3,10 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from src.models import User
-from src.auth import schemas, oauth2
+from src.auth import oauth2
+from src.auth.schemas import UserCreateSchema
 
 
-async def create_user_service(user_credentials: schemas.UserCreate, db: AsyncSession):
+async def create_user_service(user_credentials: UserCreateSchema, db: AsyncSession):
     # check email existing
     result = await db.execute(select(User).filter(User.email == user_credentials.email))
     existing_user = result.scalars().first()
