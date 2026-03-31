@@ -21,9 +21,7 @@ class UserCreateSchema(BaseModel):
     @classmethod
     def validate_password(cls, v: str) -> str:
         # REGEX: Minimum 8 characters, at least 1 uppercase, 1 lowercase, 1 number, and 1 special character
-        pattern = (
-            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$"
-        )
+        pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])\S{8,}$"
         if not re.match(pattern, v):
             raise ValueError(
                 "Password must contain at least: one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#)"
