@@ -3,6 +3,10 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.schemas import UserCreateSchema
 from src.db.database import SQLALCHEMY_DATABASE_URL, engine_factory
+from src.main import app
+
+from httpx import AsyncClient, ASGITransport
+from src.db.database import get_db
 
 
 @pytest_asyncio.fixture
@@ -22,6 +26,18 @@ async def db_session():
 
         # Roll back to leave the DB clean for the next function-scoped engine
         await trans.rollback()
+
+
+@pytest_asyncio.fixture
+async def async_client(db_session):
+    app.dependency_overrides[get_db] = lambda: db_session
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        yield client
+
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
