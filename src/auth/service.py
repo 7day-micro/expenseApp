@@ -50,3 +50,7 @@ async def login_user_service(user_credentials, db: AsyncSession):
     # token
     access_token = oauth2.create_access_token(data={"user_id": str(user.uid)})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+async def get_current_user(token_schema, db: AsyncSession):
+    return oauth2.get_current_user(token_schema, db)

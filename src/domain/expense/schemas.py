@@ -1,4 +1,4 @@
-# Initial schemas
+from uuid import UUID
 
 from pydantic import BaseModel
 from datetime import datetime
@@ -7,13 +7,14 @@ from decimal import Decimal
 
 class ExpenseSchema(BaseModel):
     id: int
-    amount: Decimal
-
-    user_id: int
+    user_id: UUID
     category_id: int
+
+    amount: Decimal
 
     transaction_date: datetime
     created_at: datetime
+    updated_at: datetime
 
     note: str
 
@@ -22,8 +23,10 @@ class ExpenseSchema(BaseModel):
 
 
 class ExpenseCreateSchema(BaseModel):
-    amount: Decimal
-    user_id: int
+    user_id: UUID
+
     category_id: int
+
+    amount: Decimal
     transaction_date: datetime
     note: str

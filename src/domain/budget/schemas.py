@@ -1,17 +1,18 @@
-# Initial schemas
-
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 from decimal import Decimal
 
+from uuid import UUID
+
 
 class BudgetSchema(BaseModel):
     id: int
+    user_id: UUID
     amount_limit: Decimal
 
     created_at: datetime
-    budget_date: datetime
+    month_year: datetime
 
     user_id: int
     category_id: Optional[int]
@@ -21,6 +22,7 @@ class BudgetSchema(BaseModel):
 
 
 class BudgetCreateSchema(BaseModel):
-    budget_date: datetime
-    user_id: int
+    user_id: UUID
     category_id: Optional[int]
+    amount_limit: Decimal
+    month_year: datetime

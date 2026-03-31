@@ -1,3 +1,37 @@
+## API Setup
+### 1 - Set .env file
+Make sure all settings that this app need is setted on .env file
+bellow and example to quick run the project
+```shell
+#DEV SETUP
+DATABASE_HOSTNAME=localhost
+DATABASE_PORT=5432
+DATABASE_PASSWORD=admin
+DATABASE_NAME=expense_db
+DATABASE_USERNAME=admin
+SECRET_KEY=uma_chave_muito_longa_e_aleatoria
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+```
+
+### 3 - Initialize database
+ -  see database setup section
+
+### 2 - Start up FastAPI app
+```shell
+run uv run uvicorn src.main:app --reload
+```
+
+
+## 🛠️ Database Setup
+
+### 1 Ensure docker installed
+### 2 initialize container
+```shell
+docker compose up -d
+```
+
 ## 🛠️ Development Setup
 
 ### 1. Install Dependencies
@@ -62,3 +96,13 @@ uv run pre-commit run --all-files
 # or
 pre-commit run --all-files
 ```
+
+
+### Tests
+#### How to test the app
+In the `./conftest.py` file there are utils fixtures to be used on all test through the project 
+
+#### How to run test
+To be sure your changes will not broke the app, run test on every new feature added/ changes
+
+- Run `uv run pytest`
