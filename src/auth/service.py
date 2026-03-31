@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from src.models import User
 from src.auth import oauth2
-from src.auth.schemas import UserCreateSchema
+from src.auth.schemas import UserCreateSchema, LoginSchema
 
 
 async def create_user_service(user_credentials: UserCreateSchema, db: AsyncSession):
@@ -32,11 +32,9 @@ async def create_user_service(user_credentials: UserCreateSchema, db: AsyncSessi
     return new_user
 
 
-async def login_user_service(user_credentials, db: AsyncSession):
+async def login_user_service(user_credentials: LoginSchema, db: AsyncSession):
     # user
-    result = await db.execute(
-        select(User).filter(User.email == user_credentials.username)
-    )
+    result = await db.execute(select(User).filter(User.email == user_credentials.email))
     user = result.scalars().first()
 
     # credentials

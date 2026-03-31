@@ -62,6 +62,11 @@ class UserResponseSchema(BaseModel):
     )
 
 
+class LoginSchema(BaseModel):
+    email: EmailStr
+    password: str
+
+
 # JWT Token schema
 class TokenSchema(BaseModel):
     access_token: str
