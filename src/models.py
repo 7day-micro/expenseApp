@@ -1,6 +1,16 @@
+from decimal import Decimal
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Boolean, Text, String, DateTime, func, Numeric, ForeignKey
+from sqlalchemy import (
+    Boolean,
+    Text,
+    String,
+    DateTime,
+    func,
+    Numeric,
+    ForeignKey,
+    Integer,
+)
 from datetime import datetime
 
 from src.db.database import Base
@@ -28,7 +38,7 @@ class User(Base):
 class Category(Base):
     __tablename__ = "categories"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID, ForeignKey("users.uid"), nullable=False
     )
@@ -49,14 +59,14 @@ class Category(Base):
 class Expense(Base):
     __tablename__ = "expenses"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID, ForeignKey("users.uid"), nullable=False
     )
-    category_id: Mapped[uuid.UUID] = mapped_column(
-        UUID, ForeignKey("categories.id"), nullable=False
+    category_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("categories.id"), nullable=False
     )
-    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     transaction_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -75,14 +85,14 @@ class Expense(Base):
 class Budget(Base):
     __tablename__ = "budgets"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID, ForeignKey("users.uid"), nullable=False
     )
-    category_id: Mapped[uuid.UUID] = mapped_column(
-        UUID, ForeignKey("categories.id"), nullable=True
+    category_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("categories.id"), nullable=True
     )
-    amount_limit: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    amount_limit: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     month_year: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
