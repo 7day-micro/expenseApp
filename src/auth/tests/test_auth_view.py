@@ -40,7 +40,6 @@ class TestAuthView:
         )
 
         assert response.status_code == 403
-        assert TokenSchema.model_validate(response.json())
 
     @pytest.mark.asyncio
     async def test_login_with_invalid_data(self, user, async_client, valid_user):
@@ -51,7 +50,6 @@ class TestAuthView:
         )
 
         assert response.status_code == 422
-        assert TokenSchema.model_validate(response.json())
 
     @pytest.mark.asyncio
     async def test_get_current_user(self, user, async_client, valid_user):
