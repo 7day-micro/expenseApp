@@ -24,7 +24,7 @@ class UserCreateSchema(BaseModel):
         pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#_])\S{8,}$"
         if not re.match(pattern, v):
             raise ValueError(
-                "Password must contain at least: one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#)"
+                "Password must contain at least: one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&#_)"
             )
         return v
 
