@@ -7,6 +7,7 @@ from src.main import app
 
 from httpx import AsyncClient, ASGITransport
 from src.db.database import get_db
+from src.models import User
 
 
 @pytest_asyncio.fixture
@@ -35,6 +36,7 @@ async def async_client(db_session):
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
+        client.headers.update({"Content-Type": "application/json"})
         yield client
 
     app.dependency_overrides.clear()
@@ -47,3 +49,19 @@ def valid_user():
         email="expenseapp@example.com",
         password="StrongePassWord123#",
     )
+
+
+@pytest_asyncio.fixture
+async def user(db_session, valid_user):
+    from src.auth.oauth2 import get_password_hash
+
+    user = User(
+        username=valid_user.username,
+        email=valid_user.email,
+        password_hash=get_password_hash(valid_user.password),
+    )
+
+    db_session.add(user)
+    db_session.commit()
+
+    return user
