@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -9,6 +10,8 @@ from src.models import Base
 from src.auth import routes as auth_routes
 from src.config import settings
 from src.errors.main import AppException
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -25,8 +28,21 @@ app = FastAPI(
     title="Expense App API", description="Backend", version="1.0.0", lifespan=lifespan
 )
 
+
 @app.exception_handler(AppException)
 async def global_app_exception_handler(request: Request, exc: AppException):
+    logger.error(
+        "app_exception",
+        extra={
+            "status_code": exc.status_code,
+            "error_code": exc.error_code,
+            "message": exc.message,
+            "context": exc.context,
+            "method": request.method,
+            "path": request.url.path,
+            "request_id": getattr(request.state, "request_id", None),
+        },
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -35,13 +51,13 @@ async def global_app_exception_handler(request: Request, exc: AppException):
                 "code": exc.error_code,
                 "message": exc.message,
                 "details": exc.context,
-                "request_id": getattr(request.state, "request_id", None)
-            }
-        }
+                "request_id": getattr(request.state, "request_id", None),
+            },
+        },
     )
+
+
 app.include_router(auth_routes.router)
-
-
 
 
 # root to try

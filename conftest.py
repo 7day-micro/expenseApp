@@ -77,7 +77,6 @@ async def admin_user(db_session, user):
     await db_session.refresh(user)
     return user
 
-
 @pytest.fixture
 def valid_category(user) -> CategoryCreateSchema:
     return CategoryCreateSchema(
