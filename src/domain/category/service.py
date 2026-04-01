@@ -1,6 +1,7 @@
 from typing import List, Any
 from uuid import UUID
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.common import BaseService
 from src.common.base_service import Model
@@ -20,13 +21,13 @@ class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema
         try:
             await self.db.commit()
             await self.db.refresh(new_category)
-        except Exception:
+        except SQLAlchemyError as e:
             await self.db.rollback()
             raise DatabaseException(
                 operation="creating",
                 entity_name="Category",
                 details={"user_id": str(user_id)},
-            )
+            ) from e
         return new_category
 
     async def update(
@@ -38,13 +39,13 @@ class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema
         try:
             await self.db.commit()
             await self.db.refresh(category)
-        except Exception:
+        except SQLAlchemyError as e:
             await self.db.rollback()
             raise DatabaseException(
                 operation="updating",
                 entity_name="Category",
                 details={"object_id": object_id, "user_id": str(user_id)},
-            )
+            ) from e
         return category
 
     async def delete(self, object_id: Any, user_id: UUID) -> Category:
@@ -52,13 +53,13 @@ class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema
         try:
             await self.db.delete(category)
             await self.db.commit()
-        except Exception:
+        except SQLAlchemyError as e:
             await self.db.rollback()
             raise DatabaseException(
                 operation="deleting",
                 entity_name="Category",
                 details={"object_id": object_id, "user_id": str(user_id)},
-            )
+            ) from e
 
         return category
 

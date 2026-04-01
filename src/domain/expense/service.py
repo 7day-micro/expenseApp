@@ -4,6 +4,7 @@ from src.common.base_service import BaseService
 from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from uuid import UUID
 from typing import Any
 
@@ -26,6 +27,29 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema]):
             ) from e
 
         return expense
+
+    async def update(
+        self, object_id: Any, data: ExpenseCreateSchema, user_id: UUID
+    ) -> Expense:
+        expense = await self.get_by_id(object_id, user_id)
+        for key, value in data.model_dump(exclude={"user_id"}).items():
+            setattr(expense, key, value)
+
+        try:
+            await self.db.commit()
+            await self.db.refresh(expense)
+            return expense
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise DatabaseException(
+                operation="updating",
+                entity_name="Expense",
+                details={
+                    "object_id": object_id,
+                    "user_id": str(user_id),
+                    "original_error": str(e),
+                },
+            ) from e
 
     async def delete(self, object_id: Any, user_id: UUID) -> Expense:
         expense = await self.get_by_id(object_id, user_id)

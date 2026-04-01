@@ -131,3 +131,37 @@ class TestCategoryService:
 
         with pytest.raises(EntityNotFoundException):
             await service.get_by_id(object_id=999999, user_id=user.uid)
+
+    @pytest.mark.asyncio
+    async def test_get_all_returns_only_user_categories(
+        self, user, other_user, db_session, valid_category
+    ):
+        service = CategoryService(db_session)
+
+        own_one = await service.create(data=valid_category, user_id=user.uid)
+        own_two_payload = valid_category.model_copy(update={"name": "second-own"})
+        own_two = await service.create(data=own_two_payload, user_id=user.uid)
+
+        other_payload = valid_category.model_copy(update={"name": "other-user"})
+        other = await service.create(data=other_payload, user_id=other_user.uid)
+
+        user_categories = await service.get_all(user_id=user.uid)
+        other_categories = await service.get_all(user_id=other_user.uid)
+
+        assert len(user_categories) == 2
+        assert {c.id for c in user_categories} == {own_one.id, own_two.id}
+        assert all(c.user_id == user.uid for c in user_categories)
+
+        assert len(other_categories) == 1
+        assert other_categories[0].id == other.id
+        assert all(c.user_id == other_user.uid for c in other_categories)
+
+    @pytest.mark.asyncio
+    async def test_get_all_returns_empty_list_for_user_with_no_categories(
+        self, db_session
+    ):
+        service = CategoryService(db_session)
+        from uuid import uuid4
+
+        categories = await service.get_all(user_id=uuid4())
+        assert categories == []

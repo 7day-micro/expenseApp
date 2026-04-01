@@ -52,3 +52,24 @@ class TestExpenseService:
         service = ExpenseService(db_session)
         result = await service.get_all(uuid4())
         assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_by_id_raises_for_nonexistent_expense_id(self, db_session):
+        service = ExpenseService(db_session)
+
+        with pytest.raises(EntityNotFoundException):
+            await service.get_by_id(object_id=999999, user_id=uuid4())
+
+    @pytest.mark.asyncio
+    async def test_get_by_id_blocks_cross_user_access(self, db_session, user, category):
+        service = ExpenseService(db_session)
+        payload = ExpenseCreateSchema(
+            category_id=category.id,
+            amount=Decimal("9.99"),
+            transaction_date=datetime.now(timezone.utc),
+            note="cross-user check",
+        )
+        created = await service.create(payload, user.uid)
+
+        with pytest.raises(EntityNotFoundException):
+            await service.get_by_id(object_id=created.id, user_id=uuid4())
