@@ -16,6 +16,9 @@ from src.domain.expense.schemas import ExpenseCreateSchema
 from src.domain.budget.schemas import BudgetCreateSchema
 from src.models import Budget
 
+from src.auth.schemas import LoginSchema
+
+
 from faker import Faker
 
 
@@ -78,20 +81,25 @@ async def user(db_session, valid_user):
 
 
 @pytest_asyncio.fixture
-async def user_factory(db_session, valid_user):
+async def user_factory(db_session):
     from src.auth.oauth2 import get_password_hash
 
-    user = User(
-        username=Faker().user_name(),
-        email=Faker().email(),
-        password_hash=get_password_hash(valid_user.password),
-    )
+    fake = Faker()
+    created = []
 
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
+    async def _factory(username=None, email=None, password="StrongPass123#"):
+        user = User(
+            username=username or fake.user_name(),
+            email=email or fake.email(),
+            password_hash=get_password_hash(password),
+        )
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
+        created.append(user)
+        return user
 
-    return user
+    return _factory
 
 
 @pytest_asyncio.fixture
@@ -157,3 +165,18 @@ async def budget(db_session, category, valid_budget_payload):
     await db_session.refresh(budget)
 
     return budget
+
+
+@pytest_asyncio.fixture
+async def authenticated_client(async_client, user, valid_user):
+    payload = LoginSchema(email=user.email, password=valid_user.password)
+    response = await async_client.post(
+        "/auth/login",
+        data=payload.model_dump_json(),
+    )
+
+    async_client.headers.update(
+        {"Authorization": f"Bearer {response.json()['access_token']}"}
+    )
+
+    return async_client

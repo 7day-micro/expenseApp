@@ -68,3 +68,34 @@ class TestAuthView:
 
         assert user_response.status_code == 200
         assert UserResponseSchema.model_validate(user_response.json())
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_unauthenticated(
+        self, user, async_client, valid_user
+    ):
+
+        user_response = await async_client.get(
+            "/auth/me",
+            headers={"Authorization": f"Bearer {'invalid_token'}"},
+        )
+
+        assert user_response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_response(
+        self, user, authenticated_client, valid_user
+    ):
+
+        user_response = await authenticated_client.get(
+            "/auth/me",
+        )
+        assert user_response.status_code == 200
+
+        response: UserResponseSchema = UserResponseSchema.model_validate(
+            user_response.json()
+        )
+
+        assert response.email == user.email
+        assert response.username == user.username
+        assert response.uid == user.uid
+        assert response.created_at is not None

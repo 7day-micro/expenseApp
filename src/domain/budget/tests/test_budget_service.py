@@ -92,7 +92,6 @@ class TestBudgetService:
         budget,
         user_factory,
         valid_budget_payload,
-        user,
         second_category,
     ):
         service = BudgetService(db_session)
@@ -105,5 +104,7 @@ class TestBudgetService:
 
         with pytest.raises(EntityNotFoundException):
             await service.update(
-                object_id=budget.id, data=update_data, user_id=user_factory.uid
+                object_id=budget.id,
+                data=update_data,
+                user_id=(await user_factory()).uid,
             )
