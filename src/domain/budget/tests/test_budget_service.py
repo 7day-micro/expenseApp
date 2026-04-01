@@ -14,12 +14,12 @@ from datetime import timedelta
 async def second_category(db_session, user, valid_category):
     """
     Create and return a second category with a deterministic unique name for tests.
-    
+
     This function sets the provided category payload's name to "Second Category" and persists it for the given user.
-    
+
     Parameters:
         valid_category: Category creation payload whose `name` will be set to "Second Category" before creation.
-    
+
     Returns:
         The created category instance.
     """
@@ -104,6 +104,7 @@ class TestBudgetService:
         user_factory,
         valid_budget_payload,
         second_category,
+        budget_factory,
     ):
         service = BudgetService(db_session)
 
@@ -119,3 +120,18 @@ class TestBudgetService:
                 data=update_data,
                 user_id=(await user_factory()).uid,
             )
+
+    @pytest.mark.asyncio
+    async def test_get_all_budgets(self, budget_factory, db_session, user, second_user):
+        service = BudgetService(db_session)
+
+        # Cria 3 budgets para o mesmo usuário
+        for _ in range(5):
+            await budget_factory(user_id=user.uid)
+            # interfence to ensure budgets are created for the second user as well, but they should not be returned in the query for the first user
+            await budget_factory(user_id=second_user.uid)
+
+        budgets = await service.get_all(user_id=user.uid)
+
+        assert len(budgets) == 5
+        assert all(budget.user_id == user.uid for budget in budgets)
