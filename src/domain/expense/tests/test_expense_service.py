@@ -64,3 +64,24 @@ class TestExpenseService:
 
         with pytest.raises(EntityNotFoundException):
             await service.get_by_id(object_id=created.id, user_id=uuid4())
+
+    @pytest.mark.asyncio
+    async def test_get_all_expenses(
+        self, db_session, user, expense_factory, category_factory
+    ):
+        service = ExpenseService(db_session)
+
+        # Create multiple expenses for the user
+        category = await category_factory(user_id=user.uid)
+
+        for i in range(5):
+            await expense_factory(
+                user_id=user.uid,
+                category_id=category.id,
+                amount=Decimal("10.00"),
+                note=f"Expense {i + 1}",
+            )
+
+        expenses = await service.get_all(user.uid)
+
+        assert len(expenses) == 5
