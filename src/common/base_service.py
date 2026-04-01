@@ -52,7 +52,7 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema]):
         user_id : The ID of the user performing the operation, used for associating the record
 
         Raises:
-            TODO : define custom exception
+            EntityNotFoundException : if the record does not exist
         """
         pass
 
@@ -62,7 +62,7 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema]):
         id : The ID of the record to delete
         user_id : The ID of the user performing the operation, used for associating the record
         Raises:
-            TODO : define custom exception
+            EntityNotFoundException : if the record does not exist
         """
         pass
 
@@ -74,7 +74,7 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema]):
 
 
         Raises:
-            TODO : define custom exception
+            EntityNotFoundException : if the record does not exist
 
         """
         pass

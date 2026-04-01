@@ -1,24 +1,13 @@
-from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
 
-from src.domain.expense.schemas import ExpenseCreateSchema
 from src.domain.expense.service import ExpenseService
 from src.errors.main import EntityNotFoundException
 
 
 class TestExpenseService:
-    @pytest.fixture
-    def valid_expense_payload(self, category):
-        return ExpenseCreateSchema(
-            category_id=category.id,
-            amount=Decimal("12.50"),
-            transaction_date=datetime.now(timezone.utc),
-            note="coffee",
-        )
-
     @pytest.mark.asyncio
     async def test_create_expense_uses_authenticated_user_id(
         self, db_session, user, category, valid_expense_payload

@@ -1,3 +1,6 @@
+from decimal import Decimal
+from datetime import datetime, timezone
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +12,9 @@ from src.main import app
 from httpx import AsyncClient, ASGITransport
 from src.db.database import get_db
 from src.models import User, Category
+from src.domain.expense.schemas import ExpenseCreateSchema
+from src.domain.budget.schemas import BudgetCreateSchema
+from src.models import Budget
 
 
 @pytest_asyncio.fixture
@@ -77,6 +83,7 @@ async def admin_user(db_session, user):
     await db_session.refresh(user)
     return user
 
+
 @pytest.fixture
 def valid_category(user) -> CategoryCreateSchema:
     return CategoryCreateSchema(
@@ -99,3 +106,29 @@ async def category(db_session, valid_category, user):
     await db_session.refresh(category)
 
     return category
+
+
+@pytest.fixture
+def valid_expense_payload(category):
+    return ExpenseCreateSchema(
+        category_id=category.id,
+        amount=Decimal("12.50"),
+        transaction_date=datetime.now(timezone.utc),
+        note="coffee",
+    )
+
+
+@pytest.fixture
+def valid_budget_payload(category, user):
+    return BudgetCreateSchema(
+        user_id=user.uid,
+        category_id=category.id,
+        amount_limit=Decimal("12.50"),
+        month_year=datetime.now(timezone.utc),
+        note="coffee",
+    )
+
+
+@pytest.fixture
+def budget(category, user, valid_budget_payload):
+    return Budget(user_id=user.uid, **valid_budget_payload.model_dump())
