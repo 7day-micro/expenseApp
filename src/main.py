@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
+from fastapi import status
+from fastapi.exceptions import RequestValidationError
 
 from src.db.database import engine
 from src.models import Base
@@ -13,7 +15,6 @@ from src.config import settings
 from src.errors.main import AppException
 
 logger = logging.getLogger(__name__)
-
 
 
 @asynccontextmanager
@@ -71,4 +72,18 @@ async def root():
 if settings.DEBUG:
     app.add_middleware(
         CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+
+    errors = exc.errors()
+    for error in errors:
+        if "input" in error:
+            del error["input"]
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": errors},
     )
