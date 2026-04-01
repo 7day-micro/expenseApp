@@ -1,6 +1,9 @@
 from importlib import import_module
 from pathlib import Path
 from sqlalchemy.orm import configure_mappers
+import logging
+
+logger = logging.getLogger(name=__file__)
 
 
 def load_models():
@@ -13,11 +16,7 @@ def load_models():
         # 🔥 prepend "src"
         full_module_name = f"src.{module_name}"
 
-        print(f"Importing: {full_module_name}")
+        logger.info(f"Importing: {full_module_name}")
         import_module(full_module_name)
 
     configure_mappers()
-
-
-if __name__ == "__main__":
-    load_models()

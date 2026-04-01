@@ -6,11 +6,17 @@ from sqlalchemy.exc import SQLAlchemyError
 from src.common import BaseService
 from src.common.base_service import Model
 from src.models import Category
-from src.domain.category.schemas import CategoryCreateSchema, CategorySchema
+from src.domain.category.schemas import (
+    CategoryCreateSchema,
+    CategorySchema,
+    CategoryUpdateSchema,
+)
 from src.errors.main import EntityNotFoundException, DatabaseException
 
 
-class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema]):
+class CategoryService(
+    BaseService[Category, CategoryCreateSchema, CategorySchema, CategoryUpdateSchema]
+):
     async def create(self, data: CategoryCreateSchema, user_id: UUID) -> Model:
         new_category = Category()
         new_category.name = data.name

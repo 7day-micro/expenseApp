@@ -23,7 +23,7 @@ async def create_user_service(user_credentials: UserCreateSchema, db: AsyncSessi
         username=user_credentials.username,
         email=user_credentials.email,
         password_hash=hashed_password,
-        role="user"
+        role="user",
     )
 
     db.add(new_user)

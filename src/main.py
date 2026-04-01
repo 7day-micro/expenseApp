@@ -7,8 +7,6 @@ from fastapi.requests import Request
 from fastapi import status
 from fastapi.exceptions import RequestValidationError
 
-from src.db.database import engine
-from src.models import Base
 from src.auth import routes as auth_routes
 from src.domain.expense import routes as expense_routes
 from src.config import settings
@@ -17,12 +15,10 @@ from src.errors.main import AppException
 logger = logging.getLogger(__name__)
 
 
+# keeping this as is we can use it later
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield
-    await engine.dispose()
 
 
 # App

@@ -23,3 +23,10 @@ class ExpenseCreateSchema(BaseModel):
     amount: Decimal
     transaction_date: datetime
     note: str
+
+
+class ExpenseUpdateSchema(BaseModel):
+    category_id: int | None = None
+    amount: Decimal | None = None
+    transaction_date: datetime | None = None
+    note: str | None = None

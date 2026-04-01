@@ -65,6 +65,7 @@ dependencies = [
     "shellingham==1.5.4",
     "six==1.17.0",
     "sqlalchemy==2.0.48",
+    "sqlalchemy-utils>=0.42.1",
     "starlette==1.0.0",
     "typer==0.24.1",
     "typing-extensions==4.15.0",
@@ -78,11 +79,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "pre-commit>=4.5.1",
-    "ruff>=0.15.8",
-]
-
+dev = ["pre-commit>=4.5.1", "ruff>=0.15.8"]
 
 
 [tool.ruff.lint.per-file-ignores]

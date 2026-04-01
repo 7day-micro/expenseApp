@@ -18,6 +18,7 @@ from src.db.database import Base
 
 import uuid
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -30,22 +31,19 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    
+
     # role
     role: Mapped[str] = mapped_column(
-        String(20), 
-        default="user", 
-        server_default="user", 
-        nullable=False
+        String(20), default="user", server_default="user", nullable=False
     )
-    
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-    
+
     # updated for ASYNC
     categories: Mapped[list["Category"]] = relationship(
         back_populates="user", lazy="selectin"
@@ -75,9 +73,7 @@ class Category(Base):
     )
 
     # updated for ASYNC
-    user: Mapped["User"] = relationship(
-        back_populates="categories", lazy="selectin"
-    )
+    user: Mapped["User"] = relationship(back_populates="categories", lazy="selectin")
     expenses: Mapped[list["Expense"]] = relationship(
         back_populates="category", lazy="selectin"
     )
@@ -109,9 +105,7 @@ class Expense(Base):
     )
 
     # updated for ASYNC
-    user: Mapped["User"] = relationship(
-        back_populates="expenses", lazy="selectin"
-    )
+    user: Mapped["User"] = relationship(back_populates="expenses", lazy="selectin")
     category: Mapped["Category"] = relationship(
         back_populates="expenses", lazy="selectin"
     )
@@ -139,9 +133,7 @@ class Budget(Base):
     )
 
     # updated for ASYNC
-    user: Mapped["User"] = relationship(
-        back_populates="budgets", lazy="selectin"
-    )
+    user: Mapped["User"] = relationship(back_populates="budgets", lazy="selectin")
     category: Mapped["Category"] = relationship(
         back_populates="budgets", lazy="selectin"
     )

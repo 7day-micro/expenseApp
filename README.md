@@ -1,9 +1,13 @@
 ## API Setup
+
 ### 1 - Set .env file
+
 Make sure all settings that this app need is setted on .env file
 bellow and example to quick run the project
+
 ```shell
-#DEV SETUP
+#DEV SET
+ENV=DEV
 DATABASE_HOSTNAME=localhost
 DATABASE_PORT=5432
 DATABASE_PASSWORD=admin
@@ -16,18 +20,21 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
 ### 3 - Initialize database
- -  see database setup section
+
+- see database setup section
 
 ### 2 - Start up FastAPI app
+
 ```shell
 run uv run uvicorn src.main:app --reload
 ```
 
-
 ## 🛠️ Database Setup
 
 ### 1 Ensure docker installed
+
 ### 2 initialize container
+
 ```shell
 docker compose up -d
 ```
@@ -40,17 +47,17 @@ Choose your preferred package manager:
 
 #### Using uv (Recommended)
 
-``` bash
+```bash
 uv sync
 ```
 
 #### Using pip
 
-``` bash
+```bash
 pip install -r requirements.txt
 ```
 
-------------------------------------------------------------------------
+---
 
 ### 2. Enable Git Hooks (pre-commit)
 
@@ -59,17 +66,17 @@ to ensure code quality.
 
 #### Using uv
 
-``` bash
+```bash
 uv run pre-commit install
 ```
 
 #### Using standard Python
 
-``` bash
+```bash
 pre-commit install
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Usage
 
@@ -82,27 +89,66 @@ will be blocked for manual fixes
 
 ⚠️ Note: If files are automatically fixed, the commit will fail. You need to review the changes, stage them again, and re-run the commit.
 
-------------------------------------------------------------------------
+---
 
 ### Manual Execution
 
 To run all checks across all files at any time:
 
-``` bash
+```bash
 uv run pre-commit run --all-files
 ```
 
-``` bash
+```bash
 # or
 pre-commit run --all-files
 ```
 
+### Migrations (Alembic)
+
+Create new migration, after making changes to you models
+
+```shell
+uv run alembic revision --autogenerate -m "describe your change here"
+```
+
+Apply Migrations
+
+```shell
+uv run alembic upgrade head
+```
+
+Other useful commands
+
+```shell
+# Check current migration version applied to the DB
+uv run alembic current
+
+# See migration history
+uv run alembic history
+
+# Roll back one migration
+uv run alembic downgrade -1
+```
 
 ### Tests
+
+```shell
+#TEST SETUP
+ENV=TEST
+TEST_DATABASE_HOSTNAME=localhost
+TEST_DATABASE_PORT=5432
+TEST_DATABASE_PASSWORD=admin
+TEST_DATABASE_NAME=test_expense_db
+TEST_DATABASE_USERNAME=admin
+```
+
 #### How to test the app
-In the `./conftest.py` file there are utils fixtures to be used on all test through the project 
+
+In the `./conftest.py` file there are utils fixtures to be used on all test through the project
 
 #### How to run test
+
 To be sure your changes will not broke the app, run test on every new feature added/ changes
 
 - Run `uv run pytest`
