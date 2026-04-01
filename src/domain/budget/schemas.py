@@ -29,6 +29,6 @@ class BudgetCreateSchema(BaseModel):
 
 
 class BudgetUpdateSchema(BaseModel):
-    category_id: Optional[int]
-    amount_limit: Optional[Decimal]
-    month_year: Optional[datetime]
+    category_id: Optional[int] = None
+    amount_limit: Optional[Decimal] = None
+    month_year: Optional[datetime] = None

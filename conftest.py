@@ -16,6 +16,8 @@ from src.domain.expense.schemas import ExpenseCreateSchema
 from src.domain.budget.schemas import BudgetCreateSchema
 from src.models import Budget
 
+from faker import Faker
+
 
 @pytest_asyncio.fixture
 async def db_session():
@@ -65,6 +67,23 @@ async def user(db_session, valid_user):
     user = User(
         username=valid_user.username,
         email=valid_user.email,
+        password_hash=get_password_hash(valid_user.password),
+    )
+
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    return user
+
+
+@pytest_asyncio.fixture
+async def user_factory(db_session, valid_user):
+    from src.auth.oauth2 import get_password_hash
+
+    user = User(
+        username=Faker().user_name(),
+        email=Faker().email(),
         password_hash=get_password_hash(valid_user.password),
     )
 
