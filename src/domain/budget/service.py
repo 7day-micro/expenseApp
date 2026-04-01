@@ -1,7 +1,11 @@
 from typing import List, Optional
 from uuid import UUID
 
-from src.domain.budget.schemas import BudgetCreateSchema, BudgetSchema
+from src.domain.budget.schemas import (
+    BudgetCreateSchema,
+    BudgetSchema,
+    BudgetUpdateSchema,
+)
 from src.exceptions import EntityNotFoundException
 from src.models import Budget
 from src.common import BaseService
@@ -18,8 +22,9 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
 
         return new_budget
 
+    # TODO : -> Make base service accept update schemas
     async def update(
-        self, object_id: int, data: BudgetCreateSchema, user_id: UUID
+        self, object_id: int, data: BudgetUpdateSchema, user_id: UUID
     ) -> Optional[Budget]:
         budget = await self.get_by_id(object_id=object_id, user_id=user_id)
 

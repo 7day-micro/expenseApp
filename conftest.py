@@ -129,6 +129,12 @@ def valid_budget_payload(category, user):
     )
 
 
-@pytest.fixture
-def budget(category, valid_budget_payload):
-    return Budget(**valid_budget_payload.model_dump())
+@pytest_asyncio.fixture
+async def budget(db_session, category, valid_budget_payload):
+    budget = Budget(**valid_budget_payload.model_dump())
+
+    db_session.add(budget)
+    await db_session.commit()
+    await db_session.refresh(budget)
+
+    return budget
