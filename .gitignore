@@ -358,3 +358,6 @@ pyrightconfig.json
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python,pycharm
+.idea/expenseApp.iml
+.idea/misc.xml
+.idea/vcs.xml
