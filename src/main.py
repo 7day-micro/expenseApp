@@ -8,6 +8,7 @@ from src.auth import routes as auth_routes
 from src.config import settings
 
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:

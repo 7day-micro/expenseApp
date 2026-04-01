@@ -51,6 +51,7 @@ class UserResponseSchema(BaseModel):
     username: str
     email: EmailStr
     is_verified: bool
+    role: str  # role
     created_at: datetime
     updated_at: datetime
 
