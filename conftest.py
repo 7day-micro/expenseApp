@@ -73,12 +73,14 @@ async def admin_user(db_session, valid_user):
     from src.auth.oauth2 import get_password_hash
 
     admin_data = valid_user.model_dump()
+    
     password = admin_data.pop("password")
+    
+    admin_data["username"] = "admin_boss"
+    admin_data["email"] = "admin@example.com"
     
     admin = User(
         **admin_data,
-        username="admin_boss", 
-        email="admin@example.com",
         password_hash=get_password_hash(password),
         role="admin" 
     )
