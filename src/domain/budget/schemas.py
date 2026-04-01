@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 from decimal import Decimal
@@ -7,6 +7,8 @@ from uuid import UUID
 
 
 class BudgetSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
     id: int
     user_id: UUID
     amount_limit: Decimal
@@ -22,6 +24,8 @@ class BudgetSchema(BaseModel):
 
 
 class BudgetCreateSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
     user_id: UUID
     category_id: Optional[int]
     amount_limit: Decimal
