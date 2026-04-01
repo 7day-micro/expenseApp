@@ -3,6 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Text,
     String,
     DateTime,
@@ -15,27 +16,46 @@ from datetime import datetime
 
 from src.db.database import Base
 
-
 import uuid
-
 
 class User(Base):
     __tablename__ = "users"
+
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'admin')", name="ck_users_role_valid"),
+    )
 
     uid: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
     username: Mapped[str] = mapped_column(String(30), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # role
+    role: Mapped[str] = mapped_column(
+        String(20), 
+        default="user", 
+        server_default="user", 
+        nullable=False
+    )
+    
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-    categories: Mapped[list["Category"]] = relationship(back_populates="user")
-    expenses: Mapped[list["Expense"]] = relationship(back_populates="user")
-    budgets: Mapped[list["Budget"]] = relationship(back_populates="user")
+    
+    # updated for ASYNC
+    categories: Mapped[list["Category"]] = relationship(
+        back_populates="user", lazy="selectin"
+    )
+    expenses: Mapped[list["Expense"]] = relationship(
+        back_populates="user", lazy="selectin"
+    )
+    budgets: Mapped[list["Budget"]] = relationship(
+        back_populates="user", lazy="selectin"
+    )
 
 
 class Category(Base):
@@ -54,9 +74,16 @@ class Category(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    user: Mapped["User"] = relationship(back_populates="categories")
-    expenses: Mapped[list["Expense"]] = relationship(back_populates="category")
-    budgets: Mapped[list["Budget"]] = relationship(back_populates="category")
+    # updated for ASYNC
+    user: Mapped["User"] = relationship(
+        back_populates="categories", lazy="selectin"
+    )
+    expenses: Mapped[list["Expense"]] = relationship(
+        back_populates="category", lazy="selectin"
+    )
+    budgets: Mapped[list["Budget"]] = relationship(
+        back_populates="category", lazy="selectin"
+    )
 
 
 class Expense(Base):
@@ -81,8 +108,13 @@ class Expense(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    user: Mapped["User"] = relationship(back_populates="expenses")
-    category: Mapped["Category"] = relationship(back_populates="expenses")
+    # updated for ASYNC
+    user: Mapped["User"] = relationship(
+        back_populates="expenses", lazy="selectin"
+    )
+    category: Mapped["Category"] = relationship(
+        back_populates="expenses", lazy="selectin"
+    )
 
 
 class Budget(Base):
@@ -106,5 +138,10 @@ class Budget(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    user: Mapped["User"] = relationship(back_populates="budgets")
-    category: Mapped["Category"] = relationship(back_populates="budgets")
+    # updated for ASYNC
+    user: Mapped["User"] = relationship(
+        back_populates="budgets", lazy="selectin"
+    )
+    category: Mapped["Category"] = relationship(
+        back_populates="budgets", lazy="selectin"
+    )
