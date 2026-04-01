@@ -6,7 +6,7 @@ from decimal import Decimal
 
 
 class ExpenseSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True) 
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     user_id: UUID
@@ -26,8 +26,9 @@ class ExpenseCreateSchema(BaseModel):
     transaction_date: datetime
     note: str
 
+
 class ExpenseResponseSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True) 
+    model_config = ConfigDict(from_attributes=True)
     user_id: UUID
     category_id: int
     amount: Decimal
