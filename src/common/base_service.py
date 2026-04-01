@@ -6,9 +6,10 @@ from uuid import UUID
 Model = TypeVar("Model")  # Model
 ResponseSchema = TypeVar("Response")  # Schema
 CreateSchema = TypeVar("Create")  # Schema
+UpdateSchema = TypeVar("Update")  # Schema
 
 
-class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema]):
+class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema]):
     """
     Base service class that defines the common CRUD operations for all services.
 
