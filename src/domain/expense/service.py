@@ -85,4 +85,4 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema]):
     async def get_all(self, user_id: UUID) -> list[Expense]:
         statement = select(Expense).where(Expense.user_id == user_id)
         result = await self.db.execute(statement)
-        return list(result.scalars().all())
+        return result.scalars().all()
