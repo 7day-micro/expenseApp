@@ -12,7 +12,7 @@ from src.models import Base
 from src.auth import routes as auth_routes
 from src.domain.expense import routes as expense_routes
 from src.config import settings
-from src.errors.main import AppException
+from src.exceptions import AppException
 
 logger = logging.getLogger(__name__)
 

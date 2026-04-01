@@ -7,7 +7,7 @@ from src.common import BaseService
 from src.common.base_service import Model
 from src.models import Category
 from src.domain.category.schemas import CategoryCreateSchema, CategorySchema
-from src.errors.main import EntityNotFoundException, DatabaseException
+from src.exceptions import EntityNotFoundException, DatabaseException
 
 
 class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema]):

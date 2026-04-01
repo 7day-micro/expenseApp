@@ -130,5 +130,5 @@ def valid_budget_payload(category, user):
 
 
 @pytest.fixture
-def budget(category, user, valid_budget_payload):
-    return Budget(user_id=user.uid, **valid_budget_payload.model_dump())
+def budget(category, valid_budget_payload):
+    return Budget(**valid_budget_payload.model_dump())

@@ -4,7 +4,7 @@ import pytest_asyncio
 from src.auth.oauth2 import get_password_hash
 from src.models import User
 from src.domain.category.service import CategoryService
-from src.errors.main import EntityNotFoundException
+from src.exceptions import EntityNotFoundException
 
 
 class TestCategoryService:

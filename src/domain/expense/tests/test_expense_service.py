@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from src.domain.expense.service import ExpenseService
-from src.errors.main import EntityNotFoundException
+from src.exceptions import EntityNotFoundException
 
 
 class TestExpenseService:

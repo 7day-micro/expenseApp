@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from src.domain.budget.schemas import BudgetCreateSchema, BudgetSchema
-from src.errors.main import EntityNotFoundException
+from src.exceptions import EntityNotFoundException
 from src.models import Budget
 from src.common import BaseService
 

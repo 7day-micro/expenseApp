@@ -1,5 +1,5 @@
 from src.models import Expense
-from src.errors.main import EntityNotFoundException, DatabaseException
+from src.exceptions import EntityNotFoundException, DatabaseException
 from src.common.base_service import BaseService
 from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema
 
