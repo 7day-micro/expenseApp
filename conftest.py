@@ -55,27 +55,32 @@ def valid_user():
 async def user(db_session, valid_user):
     from src.auth.oauth2 import get_password_hash
 
+    user_data = valid_user.model_dump()
+    password = user_data.pop("password")
+    
     user = User(
-        username=valid_user.username,
-        email=valid_user.email,
-        password_hash=get_password_hash(valid_user.password),
+        **user_data,
+        password_hash=get_password_hash(password)
     )
 
     db_session.add(user)
-    await db_session.commit() #await!
+    await db_session.commit()
 
     return user
 
-
 @pytest_asyncio.fixture
-async def admin_user(db_session):
+async def admin_user(db_session, valid_user):
     from src.auth.oauth2 import get_password_hash
 
+    admin_data = valid_user.model_dump()
+    password = admin_data.pop("password")
+    
     admin = User(
-        username="adminboss",
+        **admin_data,
+        username="admin_boss", 
         email="admin@example.com",
-        password_hash=get_password_hash("SuperAdmin123!"),
-        role="admin"  #admin
+        password_hash=get_password_hash(password),
+        role="admin" 
     )
 
     db_session.add(admin)
