@@ -3,6 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Text,
     String,
     DateTime,
@@ -19,6 +20,10 @@ import uuid
 
 class User(Base):
     __tablename__ = "users"
+
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'admin')", name="ck_users_role_valid"),
+    )
 
     uid: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
     username: Mapped[str] = mapped_column(String(30), nullable=False)
