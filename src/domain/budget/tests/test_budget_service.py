@@ -12,6 +12,17 @@ from datetime import timedelta
 
 @pytest_asyncio.fixture
 async def second_category(db_session, user, valid_category):
+    """
+    Create and return a second category with a deterministic unique name for tests.
+    
+    This function sets the provided category payload's name to "Second Category" and persists it for the given user.
+    
+    Parameters:
+        valid_category: Category creation payload whose `name` will be set to "Second Category" before creation.
+    
+    Returns:
+        The created category instance.
+    """
     service = CategoryService(db_session)
     # Garante um nome único para evitar IntegrityError de duplicidade
     valid_category.name = "Second Category"
