@@ -6,11 +6,12 @@ from src.domain.budget.schemas import (
     BudgetSchema,
     BudgetUpdateSchema,
 )
-from src.exceptions import EntityNotFoundException
+from src.exceptions import EntityNotFoundException, DatabaseException
 from src.models import Budget
 from src.common import BaseService
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 
 class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
@@ -26,9 +27,16 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
             Budget: The persisted Budget instance.
         """
         new_budget = Budget(**data.model_dump())
-
-        self.db.add(new_budget)
-        await self.db.commit()
+        try:
+            self.db.add(new_budget)
+            await self.db.commit()
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise DatabaseException(
+                operation="creating",
+                entity_name="budget",
+                details={"user_id": str(user_id), "original_error": str(e)},
+            ) from e
 
         return new_budget
 
@@ -55,8 +63,20 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
         for key, value in data.model_dump(exclude_unset=True).items():
             setattr(budget, key, value)
 
-        await self.db.commit()
-        await self.db.refresh(budget)
+        try:
+            await self.db.commit()
+            await self.db.refresh(budget)
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise DatabaseException(
+                operation="update",
+                entity_name="Budget",
+                details={
+                    "object_id": object_id,
+                    "user_id": str(user_id),
+                    "original_error": str(e),
+                },
+            )
         return budget
 
     async def delete(self, object_id: int, user_id: UUID) -> Optional[Budget]:
@@ -75,8 +95,20 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
         """
         result = await self.get_by_id(object_id=object_id, user_id=user_id)
 
-        await self.db.delete(result)
-        await self.db.commit()
+        try:
+            await self.db.delete(result)
+            await self.db.commit()
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise DatabaseException(
+                operation="delete",
+                entity_name="Budget",
+                details={
+                    "object_id": object_id,
+                    "user_id": str(user_id),
+                    "original_error": str(e),
+                },
+            )
         return result
 
     async def get_by_id(self, object_id: int, user_id: UUID) -> Optional[Budget]:
