@@ -1,0 +1,60 @@
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.auth.oauth2 import get_current_user
+from src.db.database import get_db
+from src.domain.budget.schemas import BudgetUpdateSchema, BudgetCreateSchema, BudgetSchema
+from src.domain.budget.service import BudgetService
+from src.models import User
+
+router = APIRouter(prefix="/budgets", tags=["Budgets"])
+
+
+@router.post("/", response_model=BudgetSchema, status_code=status.HTTP_201_CREATED)
+async def create_expense(
+    payload: BudgetCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = BudgetService(db)
+    return await service.create(payload, current_user.uid)
+
+
+@router.get("/", response_model=list[BudgetSchema])
+async def list_expenses(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = BudgetService(db)
+    return await service.get_all(current_user.uid)
+
+
+@router.get("/{expense_id}", response_model=BudgetSchema)
+async def get_expense(
+    expense_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = BudgetService(db)
+    return await service.get_by_id(expense_id, current_user.uid)
+
+
+@router.patch("/{expense_id}", response_model=BudgetSchema)
+async def update_expense(
+    expense_id: int,
+    payload: BudgetUpdateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = BudgetService(db)
+    return await service.update(expense_id, payload, current_user.uid)
+
+
+@router.delete("/{expense_id}", response_model=BudgetSchema)
+async def delete_expense(
+    expense_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = BudgetService(db)
+    return await service.delete(expense_id, current_user.uid)
