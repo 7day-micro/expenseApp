@@ -18,7 +18,7 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema]):
         try:
             await self.db.commit()
             await self.db.refresh(expense)
-        except Exception as e:
+        except SQLAlchemyError as e:
             await self.db.rollback()
             raise DatabaseException(
                 operation="creating",
@@ -58,7 +58,7 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema]):
             await self.db.delete(expense)
             await self.db.commit()
             return expense
-        except Exception as e:
+        except SQLAlchemyError as e:
             await self.db.rollback()
             raise DatabaseException(
                 operation="deleting",

@@ -78,7 +78,7 @@ class TestCategoryService:
         assert result.name == category.name
         assert result.color_icon == category.color_icon
         assert result.user_id == user.uid
-        assert result == category
+        assert result.id == category.id
 
     @pytest.mark.asyncio
     async def test_update_does_not_override_user_id(
