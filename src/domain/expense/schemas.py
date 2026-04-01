@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from typing import Optional
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from decimal import Decimal
@@ -23,3 +24,10 @@ class ExpenseCreateSchema(BaseModel):
     amount: Decimal
     transaction_date: datetime
     note: str
+
+
+class ExpenseUpdateSchema(BaseModel):
+    category_id: Optional[int] = None
+    amount: Optional[Decimal] = None
+    transaction_date: Optional[datetime] = None
+    note: Optional[str] = None

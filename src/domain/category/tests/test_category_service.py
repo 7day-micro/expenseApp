@@ -5,6 +5,7 @@ from src.auth.oauth2 import get_password_hash
 from src.models import User
 from src.domain.category.service import CategoryService
 from src.exceptions import EntityNotFoundException
+from src.domain.category.schemas import CategoryUpdateSchema
 
 
 class TestCategoryService:
@@ -98,6 +99,18 @@ class TestCategoryService:
         )
 
         assert str(updated.user_id) == str(user.uid)
+
+    @pytest.mark.asyncio
+    async def test_update_no_update_data(
+        self, user_factory, db_session, category_factory
+    ):
+        service = CategoryService(db_session)
+
+        user = await user_factory()
+        category = await category_factory(user_id=user.uid)
+        empty_update = CategoryUpdateSchema()
+
+        await service.update(object_id=category.id, user_id=user.uid, data=empty_update)
 
     @pytest.mark.asyncio
     async def test_get_by_id_raises_for_other_user(self, category, db_session):

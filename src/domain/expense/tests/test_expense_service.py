@@ -1,3 +1,4 @@
+from src.domain.expense.schemas import ExpenseUpdateSchema
 from decimal import Decimal
 from uuid import uuid4
 
@@ -5,6 +6,7 @@ import pytest
 
 from src.domain.expense.service import ExpenseService
 from src.exceptions import EntityNotFoundException
+from datetime import datetime
 
 
 class TestExpenseService:
@@ -85,3 +87,78 @@ class TestExpenseService:
         expenses = await service.get_all(user.uid)
 
         assert len(expenses) == 5
+
+    @pytest.mark.asyncio
+    async def test_update_expense(
+        self, db_session, user, expense_factory, category_factory
+    ):
+        service = ExpenseService(db_session)
+
+        category = await category_factory(user_id=user.uid)
+
+        expense = await expense_factory(
+            user_id=user.uid,
+            category_id=category.id,
+            amount=Decimal("15.00"),
+            note="Original Note",
+        )
+
+        payload = ExpenseUpdateSchema(
+            amount=Decimal("20.00"),
+            transaction_date=datetime.now(),
+            note="Updated Note",
+        )
+
+        updated = await service.update(
+            object_id=expense.id, data=payload, user_id=user.uid
+        )
+
+        assert updated.amount == payload.amount
+        assert updated.note == payload.note
+        assert updated.transaction_date == payload.transaction_date
+
+    @pytest.mark.asyncio
+    async def test_update_expense_with_none_data(
+        self, db_session, user, expense_factory, category_factory
+    ):
+        service = ExpenseService(db_session)
+
+        category = await category_factory(user_id=user.uid)
+
+        expense = await expense_factory(
+            user_id=user.uid,
+            category_id=category.id,
+            amount=Decimal("15.00"),
+            note="Original Note",
+        )
+
+        payload = ExpenseUpdateSchema(
+            amount=None,
+            transaction_date=None,
+            note=None,
+        )
+
+        confirm_payload = ExpenseUpdateSchema(
+            amount=Decimal("20.00"),
+            transaction_date=expense.transaction_date,
+            note="Updated Note",
+        )
+
+        assert await service.get_all(user.uid) is not None
+        assert len(await service.get_all(user.uid)) == 1
+
+        updated = await service.update(
+            object_id=expense.id, data=payload, user_id=user.uid
+        )
+
+        assert updated.amount == Decimal("15.00")
+        assert updated.note == "Original Note"
+        assert updated.transaction_date == expense.transaction_date
+
+        update2 = await service.update(
+            object_id=expense.id, data=confirm_payload, user_id=user.uid
+        )
+
+        assert update2.amount == Decimal("20.00")
+        assert update2.note == "Updated Note"
+        assert update2.transaction_date == expense.transaction_date

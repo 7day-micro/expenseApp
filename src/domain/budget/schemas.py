@@ -16,7 +16,6 @@ class BudgetSchema(BaseModel):
     created_at: datetime
     month_year: datetime
 
-    user_id: int
     category_id: Optional[int]
 
     class Meta:
@@ -24,7 +23,7 @@ class BudgetSchema(BaseModel):
 
 
 class BudgetCreateSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    model_config = ConfigDict(from_attributes=True)
 
     user_id: UUID
     category_id: Optional[int]

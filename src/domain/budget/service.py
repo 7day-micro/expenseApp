@@ -26,7 +26,7 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
         Returns:
             Budget: The persisted Budget instance.
         """
-        new_budget = Budget(**data.model_dump())
+        new_budget = Budget(**data.model_dump(exclude={"user_id"}), user_id=user_id)
         try:
             self.db.add(new_budget)
             await self.db.commit()
@@ -60,7 +60,9 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
         """
         budget = await self.get_by_id(object_id=object_id, user_id=user_id)
 
-        for key, value in data.model_dump(exclude_unset=True).items():
+        for key, value in data.model_dump(
+            exclude_unset=True, exclude_none=True
+        ).items():
             setattr(budget, key, value)
 
         try:

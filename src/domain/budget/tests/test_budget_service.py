@@ -135,3 +135,31 @@ class TestBudgetService:
 
         assert len(budgets) == 5
         assert all(budget.user_id == user.uid for budget in budgets)
+
+    @pytest.mark.asyncio
+    async def test_update_with_none_fields_dont_persists(
+        self, user, db_session, budget_factory, category_factory
+    ):
+        c1 = await category_factory(user_id=user.uid)
+        b1 = await budget_factory(user_id=user.uid, category_id=c1.id)
+        service = BudgetService(db_session)
+
+        await service.update(
+            object_id=b1.id, data=BudgetUpdateSchema(), user_id=user.uid
+        )
+
+        assert b1.category_id is not None
+        assert b1.amount_limit is not None
+        assert b1.month_year is not None
+
+        await service.update(
+            object_id=b1.id,
+            data=BudgetUpdateSchema(
+                amount_limit=None, category_id=None, month_year=None
+            ),
+            user_id=user.uid,
+        )
+
+        assert b1.category_id is not None
+        assert b1.amount_limit is not None
+        assert b1.month_year is not None

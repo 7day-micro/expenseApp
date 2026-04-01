@@ -319,7 +319,6 @@ def valid_budget_payload(category, user):
         category_id=category.id,
         amount_limit=Decimal("12.50"),
         month_year=datetime.now(timezone.utc),
-        note="coffee",
     )
 
 
@@ -391,6 +390,7 @@ async def authenticated_client(async_client, user, valid_user):
         data=payload.model_dump_json(),
     )
 
+    assert response.status_code == 200, "Login failed in authenticated_client fixture"
     async_client.headers.update(
         {"Authorization": f"Bearer {response.json()['access_token']}"}
     )
