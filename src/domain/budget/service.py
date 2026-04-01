@@ -24,8 +24,9 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
         
         Returns:
             Budget: The persisted Budget instance.
-        """
-        new_budget = Budget(**data.model_dump())
+    async def create(self, data: BudgetCreateSchema, user_id: UUID) -> Budget:
+        new_budget = Budget(**data.model_dump(exclude={"user_id"}))
+        new_budget.user_id = user_id
 
         self.db.add(new_budget)
         await self.db.commit()
