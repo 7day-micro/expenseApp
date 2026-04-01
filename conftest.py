@@ -3,11 +3,12 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.schemas import UserCreateSchema
 from src.db.database import SQLALCHEMY_DATABASE_URL, engine_factory
+from src.domain.category.schemas import CategoryCreateSchema
 from src.main import app
 
 from httpx import AsyncClient, ASGITransport
 from src.db.database import get_db
-from src.models import User
+from src.models import User, Category
 
 
 @pytest_asyncio.fixture
@@ -55,13 +56,15 @@ def valid_user():
 async def user(db_session, valid_user):
     from src.auth.oauth2 import get_password_hash
 
-    user_data = valid_user.model_dump()
-    password = user_data.pop("password")
-
-    user = User(**user_data, password_hash=get_password_hash(password))
+    user = User(
+        username=valid_user.username,
+        email=valid_user.email,
+        password_hash=get_password_hash(valid_user.password),
+    )
 
     db_session.add(user)
     await db_session.commit()
+    await db_session.refresh(user)
 
     return user
 
@@ -73,3 +76,27 @@ async def admin_user(db_session, user):
     await db_session.commit()
     await db_session.refresh(user)
     return user
+
+
+@pytest.fixture
+def valid_category(user) -> CategoryCreateSchema:
+    return CategoryCreateSchema(
+        name="Valid Category",
+        user_id=user.uid,
+        color_icon="test_color_icon",
+    )
+
+
+@pytest_asyncio.fixture
+async def category(db_session, valid_category, user):
+    category = Category(
+        name=valid_category.name,
+        color_icon=valid_category.color_icon,
+        user_id=user.uid,
+    )
+
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+
+    return category
