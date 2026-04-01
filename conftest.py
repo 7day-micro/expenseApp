@@ -57,35 +57,19 @@ async def user(db_session, valid_user):
 
     user_data = valid_user.model_dump()
     password = user_data.pop("password")
-    
-    user = User(
-        **user_data,
-        password_hash=get_password_hash(password)
-    )
+
+    user = User(**user_data, password_hash=get_password_hash(password))
 
     db_session.add(user)
     await db_session.commit()
 
     return user
 
+
 @pytest_asyncio.fixture
-async def admin_user(db_session, valid_user):
-    from src.auth.oauth2 import get_password_hash
-
-    admin_data = valid_user.model_dump()
-    
-    password = admin_data.pop("password")
-    
-    admin_data["username"] = "admin_boss"
-    admin_data["email"] = "admin@example.com"
-    
-    admin = User(
-        **admin_data,
-        password_hash=get_password_hash(password),
-        role="admin" 
-    )
-
-    db_session.add(admin)
+async def admin_user(db_session, user):
+    user.role = "admin"
+    db_session.add(user)
     await db_session.commit()
-
-    return admin
+    await db_session.refresh(user)
+    return user
