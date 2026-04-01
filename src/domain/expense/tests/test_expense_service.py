@@ -10,17 +10,21 @@ from src.errors.main import EntityNotFoundException
 
 
 class TestExpenseService:
-    @pytest.mark.asyncio
-    async def test_create_expense_uses_authenticated_user_id(
-        self, db_session, user, category
-    ):
-        service = ExpenseService(db_session)
-        payload = ExpenseCreateSchema(
+    @pytest.fixture
+    def valid_expense_payload(self, category):
+        return ExpenseCreateSchema(
             category_id=category.id,
             amount=Decimal("12.50"),
             transaction_date=datetime.now(timezone.utc),
             note="coffee",
         )
+
+    @pytest.mark.asyncio
+    async def test_create_expense_uses_authenticated_user_id(
+        self, db_session, user, category, valid_expense_payload
+    ):
+        service = ExpenseService(db_session)
+        payload = valid_expense_payload
 
         created = await service.create(payload, user.uid)
 
@@ -29,13 +33,12 @@ class TestExpenseService:
         assert created.amount == Decimal("12.50")
 
     @pytest.mark.asyncio
-    async def test_delete_requires_expense_ownership(self, db_session, user, category):
+    async def test_delete_requires_expense_ownership(
+        self, db_session, user, valid_expense_payload
+    ):
         service = ExpenseService(db_session)
-        payload = ExpenseCreateSchema(
-            category_id=category.id,
-            amount=Decimal("20.00"),
-            transaction_date=datetime.now(timezone.utc),
-            note="transport",
+        payload = valid_expense_payload.model_copy(
+            update={"amount": Decimal("20.00"), "note": "transport"}
         )
         created = await service.create(payload, user.uid)
 
@@ -61,13 +64,12 @@ class TestExpenseService:
             await service.get_by_id(object_id=999999, user_id=uuid4())
 
     @pytest.mark.asyncio
-    async def test_get_by_id_blocks_cross_user_access(self, db_session, user, category):
+    async def test_get_by_id_blocks_cross_user_access(
+        self, db_session, user, valid_expense_payload
+    ):
         service = ExpenseService(db_session)
-        payload = ExpenseCreateSchema(
-            category_id=category.id,
-            amount=Decimal("9.99"),
-            transaction_date=datetime.now(timezone.utc),
-            note="cross-user check",
+        payload = valid_expense_payload.model_copy(
+            update={"amount": Decimal("9.99"), "note": "cross-user check"}
         )
         created = await service.create(payload, user.uid)
 

@@ -9,11 +9,14 @@ from src.errors.main import EntityNotFoundException
 
 class TestCategoryService:
     @pytest_asyncio.fixture
-    async def other_user(self, db_session):
+    async def other_user(self, db_session, valid_user):
+        other_user_payload = valid_user.model_copy(
+            update={"username": "otheruser", "email": "otheruser@example.com"}
+        )
         new_user = User(
-            username="otheruser",
-            email="otheruser@example.com",
-            password_hash=get_password_hash("StrongePassWord123#"),
+            username=other_user_payload.username,
+            email=other_user_payload.email,
+            password_hash=get_password_hash(other_user_payload.password),
         )
         db_session.add(new_user)
         await db_session.commit()
