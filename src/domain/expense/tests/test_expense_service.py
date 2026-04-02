@@ -115,7 +115,10 @@ class TestExpenseService:
 
         assert updated.amount == payload.amount
         assert updated.note == payload.note
-        assert updated.transaction_date == payload.transaction_date
+        assert (
+            updated.transaction_date.astimezone()
+            == payload.transaction_date.astimezone()
+        )
 
     @pytest.mark.asyncio
     async def test_update_expense_with_none_data(

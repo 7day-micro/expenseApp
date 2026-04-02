@@ -39,8 +39,8 @@ async def global_app_exception_handler(request: Request, exc: AppException):
         extra={
             "status_code": exc.status_code,
             "error_code": exc.error_code,
-            "message": exc.message,
-            "context": exc.context,
+            # "message": exc.message, # REMOVE , BY ERROR @Deiv888
+            "context": str(exc.context),
             "method": request.method,
             "path": request.url.path,
             "request_id": getattr(request.state, "request_id", None),

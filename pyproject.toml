@@ -52,6 +52,7 @@ dependencies = [
     "pygments==2.20.0",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
+    "pytest-xdist>=3.8.0",
     "python-discovery==1.2.1",
     "python-dotenv==1.2.2",
     "python-jose==3.5.0",

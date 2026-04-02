@@ -11,7 +11,7 @@ class ExpenseSchema(BaseModel):
 
     id: int
     user_id: UUID
-    category_id: int
+    category_id: Optional[int] = None
     amount: Decimal
     transaction_date: datetime
     created_at: datetime
@@ -20,7 +20,7 @@ class ExpenseSchema(BaseModel):
 
 
 class ExpenseCreateSchema(BaseModel):
-    category_id: int
+    category_id: Optional[int] = None
     amount: Decimal
     transaction_date: datetime
     note: str

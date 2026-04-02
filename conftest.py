@@ -136,7 +136,6 @@ async def user_factory(db_session):
     from src.auth.oauth2 import get_password_hash
 
     fake = Faker()
-    created = []
 
     async def _factory(username=None, email=None, password="StrongPass123#"):
         """
@@ -158,7 +157,6 @@ async def user_factory(db_session):
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
-        created.append(user)
         return user
 
     return _factory
@@ -396,3 +394,29 @@ async def authenticated_client(async_client, user, valid_user):
     )
 
     return async_client
+
+
+@pytest_asyncio.fixture
+async def authenticated_client_factory(db_session):
+    clients = []
+
+    async def _factory(user, password="StrongePassWord123#"):
+        client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+        client.headers.update({"Content-Type": "application/json"})
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        payload = LoginSchema(email=user.email, password=password)
+        response = await client.post("/auth/login", data=payload.model_dump_json())
+
+        assert response.status_code == 200, f"Login failed for {user.email}"
+        client.headers.update(
+            {"Authorization": f"Bearer {response.json()['access_token']}"}
+        )
+
+        clients.append(client)
+        return client
+
+    yield _factory
+
+    for client in clients:
+        await client.aclose()
