@@ -14,7 +14,7 @@ from src.domain.category.schemas import (
 from src.exceptions import EntityNotFoundException, DatabaseException
 
 
-class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema]):
+class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema, CategoryUpdateSchema]): #fixed
     async def create(self, data: CategoryCreateSchema, user_id: UUID) -> Model:
         new_category = Category()
         new_category.name = data.name

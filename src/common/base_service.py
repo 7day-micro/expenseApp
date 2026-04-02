@@ -45,7 +45,7 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
 
     @abstractmethod
     async def update(
-        self, object_id: Any, data: CreateSchema, user_id: UUID
+        self, object_id: Any, data: UpdateSchema, user_id: UUID #FIXED
     ) -> Optional[Model]:
         """
         Update an existing record identified by `object_id` with `data` for the given `user_id`.

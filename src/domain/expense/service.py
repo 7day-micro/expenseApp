@@ -9,7 +9,7 @@ from uuid import UUID
 from typing import Any
 
 
-class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema]):
+class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, ExpenseCreateSchema]): #fixed
     async def create(self, data: ExpenseCreateSchema, user_id: UUID) -> Expense:
         expense = Expense(**data.model_dump(exclude={"user_id"}))
         expense.user_id = user_id
