@@ -24,8 +24,6 @@ class BudgetSchema(BaseModel):
 
 class BudgetCreateSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
-    user_id: UUID
     category_id: Optional[int]
     amount_limit: Decimal
     month_year: datetime

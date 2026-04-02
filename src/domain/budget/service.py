@@ -9,6 +9,8 @@ from src.domain.budget.schemas import (
 from src.exceptions import EntityNotFoundException, DatabaseException
 from src.models import Budget
 from src.common import BaseService
+from src.domain.category.service import CategoryService
+from src.models import Category
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -26,7 +28,7 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, Budget
         Returns:
             Budget: The persisted Budget instance.
         """
-        new_budget = Budget(**data.model_dump(exclude={"user_id"}), user_id=user_id)
+        new_budget = Budget(**data.model_dump(), user_id=user_id)
         try:
             self.db.add(new_budget)
             await self.db.commit()
@@ -58,6 +60,10 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, Budget
         Raises:
             EntityNotFoundException: If no Budget with the given id exists for the specified user.
         """
+        result = await self.db.get(Category, data.category_id)
+        if not result:
+            raise EntityNotFoundException(object_id=data.category_id, entity_name="Category")
+
         budget = await self.get_by_id(object_id=object_id, user_id=user_id)
 
         for key, value in data.model_dump(
