@@ -1,36 +1,18 @@
-## API Setup
-### 1 - Set .env file
-Make sure all settings that this app need is setted on .env file
-bellow and example to quick run the project
-```shell
-#DEV SETUP
-DATABASE_HOSTNAME=localhost
-DATABASE_PORT=5432
-DATABASE_PASSWORD=admin
-DATABASE_NAME=expense_db
-DATABASE_USERNAME=admin
-SECRET_KEY=uma_chave_muito_longa_e_aleatoria
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+# 💸 ExpenseApp
 
-```
+A FastAPI-powered expense tracking API that helps users manage their finances by tracking expenses, setting budgets, and organising spending by category.
 
-### 3 - Initialize database
- -  see database setup section
+---
 
-### 2 - Start up FastAPI app
-```shell
-run uv run uvicorn src.main:app --reload
-```
+## 📋 Table of Contents
 
+- [Development Setup](#-development-setup)
+- [Database Setup](#-database-setup)
+- [Running the App](#-running-the-app)
+- [Testing](#-testing)
+- [Code Quality](#-code-quality)
 
-## 🛠️ Database Setup
-
-### 1 Ensure docker installed
-### 2 initialize container
-```shell
-docker compose up -d
-```
+---
 
 ## 🛠️ Development Setup
 
@@ -40,69 +22,118 @@ Choose your preferred package manager:
 
 #### Using uv (Recommended)
 
-``` bash
+```bash
 uv sync
 ```
 
 #### Using pip
 
-``` bash
+```bash
 pip install -r requirements.txt
 ```
 
-------------------------------------------------------------------------
+### 2. Set Up Environment Variables
 
-### 2. Enable Git Hooks (pre-commit)
+Copy the example below into a `.env` file at the root of the project:
 
-Hooks automatically run linting and formatting checks before each commit
-to ensure code quality.
+```shell
+# DEV SETUP
+DATABASE_HOSTNAME=localhost
+DATABASE_PORT=5432
+DATABASE_PASSWORD=admin
+DATABASE_NAME=expense_db
+DATABASE_USERNAME=admin
+SECRET_KEY=uma_chave_muito_longa_e_aleatoria
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+### 3. Enable Git Hooks (pre-commit)
+
+Hooks automatically run linting and formatting checks before each commit to ensure code quality.
 
 #### Using uv
 
-``` bash
+```bash
 uv run pre-commit install
 ```
 
 #### Using standard Python
 
-``` bash
+```bash
 pre-commit install
 ```
 
-------------------------------------------------------------------------
+---
 
-## Usage
+## 🗄️ Database Setup
+
+### Using Docker (Recommended)
+
+1. Ensure Docker is installed on your machine
+2. Start the database container:
+
+```bash
+docker compose up -d
+```
+
+---
+
+## 🚀 Running the App
+
+### Mac/Linux
+
+```bash
+uv run uvicorn src.main:app --reload
+```
+
+### ⚠️ Windows Users
+
+`uvloop` does not support Windows. Use the following command instead:
+
+```bash
+uv run uvicorn src.main:app --loop asyncio --reload
+```
+
+Once running, visit:
+
+- **API:** http://127.0.0.1:8000
+- **Interactive Docs (Swagger):** http://127.0.0.1:8000/docs
+- **Alternative Docs (ReDoc):** http://127.0.0.1:8000/redoc
+
+---
+
+## 🧪 Testing
+
+The `./conftest.py` file contains utility fixtures available across all tests.
+
+To run tests and verify your changes don't break the app:
+
+```bash
+uv run pytest
+```
+
+> ⚠️ Run tests on every new feature or change before opening a PR.
+
+---
+
+## ✅ Code Quality
 
 ### Automatic Checks
 
-Once installed, pre-commit runs automatically on every git commit.
+Once pre-commit is installed, it runs automatically on every `git commit`.
 
-If issues are found: - They may be fixed automatically, or - The commit
-will be blocked for manual fixes
+If issues are found:
 
-⚠️ Note: If files are automatically fixed, the commit will fail. You need to review the changes, stage them again, and re-run the commit.
+- They may be **fixed automatically**, or
+- The commit will be **blocked** for manual fixes
 
-------------------------------------------------------------------------
+> ⚠️ If files are automatically fixed, the commit will fail. Review the changes, stage them again, and re-run the commit.
 
 ### Manual Execution
 
 To run all checks across all files at any time:
 
-``` bash
+```bash
 uv run pre-commit run --all-files
 ```
-
-``` bash
-# or
-pre-commit run --all-files
-```
-
-
-### Tests
-#### How to test the app
-In the `./conftest.py` file there are utils fixtures to be used on all test through the project 
-
-#### How to run test
-To be sure your changes will not broke the app, run test on every new feature added/ changes
-
-- Run `uv run pytest`
