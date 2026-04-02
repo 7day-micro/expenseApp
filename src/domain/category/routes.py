@@ -12,7 +12,7 @@ from src.domain.category.service import CategoryService
 
 from src.models import User
 
-router = APIRouter(prefix="/categorys", tags=["categorys"])
+router = APIRouter(prefix="/categories", tags=["categories"])
 
 
 @router.post("/", response_model=CategorySchema, status_code=status.HTTP_201_CREATED)
