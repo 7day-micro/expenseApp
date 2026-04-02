@@ -6,8 +6,8 @@ A FastAPI-powered expense tracking API that helps users manage their finances by
 
 ## 📋 Table of Contents
 
-- [Development Setup](#-development-setup)
-- [Database Setup](#-database-setup)
+- [Development Setup](`#development-setup`)
+- [Database Setup](`#database-setup`)
 - [Running the App](#-running-the-app)
 - [Testing](#-testing)
 - [Code Quality](#-code-quality)
