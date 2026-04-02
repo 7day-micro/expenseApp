@@ -1,7 +1,7 @@
 from src.models import Expense
 from src.exceptions import EntityNotFoundException, DatabaseException
 from src.common.base_service import BaseService
-from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema
+from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,7 +9,7 @@ from uuid import UUID
 from typing import Any
 
 
-class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, ExpenseCreateSchema]): #fixed
+class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema]):
     async def create(self, data: ExpenseCreateSchema, user_id: UUID) -> Expense:
         expense = Expense(**data.model_dump(exclude={"user_id"}))
         expense.user_id = user_id
@@ -29,7 +29,7 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, Ex
         return expense
 
     async def update(
-        self, object_id: Any, data: ExpenseCreateSchema, user_id: UUID
+        self, object_id: Any, data: ExpenseUpdateSchema, user_id: UUID
     ) -> Expense:
         expense = await self.get_by_id(object_id, user_id)
         for key, value in data.model_dump(
