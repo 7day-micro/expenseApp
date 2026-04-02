@@ -148,6 +148,29 @@ class TestBudgetRoutes:
         assert str(updated.user_id) == str(user.uid)
 
     @pytest.mark.asyncio
+    async def test_update_budget_invalid_data(
+        self, create_budget_request, authenticated_client, budget_update_payload, user
+    ):
+        created = await create_budget_request()
+        assert created.status_code == 201
+        created_budget = BudgetSchema.model_validate(created.json())
+
+        created_budget.category_id = 99999999
+
+        update_response = await authenticated_client.patch(
+            f"{BUDGET_BASE_PATH}/{created_budget.id}",
+            data=created_budget.model_dump_json(),
+        )
+
+        assert update_response.status_code == 200
+
+        updated = BudgetSchema.model_validate(update_response.json())
+        assert updated.id == created_budget.id
+        assert updated.amount_limit == budget_update_payload.amount_limit
+        assert updated.month_year == budget_update_payload.month_year
+        assert str(updated.user_id) == str(user.uid)
+
+    @pytest.mark.asyncio
     async def test_user_cannot_update_other_user_budget(
         self, authenticated_client, budget_factory, second_user, budget_update_payload
     ):

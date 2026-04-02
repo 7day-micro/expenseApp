@@ -6,7 +6,7 @@ import pytest_asyncio
 from src.domain.category.schemas import CategorySchema, CategoryUpdateSchema
 
 
-CATEGORY_BASE_PATH = "/categorys"
+CATEGORY_BASE_PATH = "/categories"
 
 
 @pytest.fixture
