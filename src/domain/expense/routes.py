@@ -3,7 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.oauth2 import get_current_user
 from src.db.database import get_db
-from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema
+from src.domain.expense.schemas import (
+    ExpenseCreateSchema,
+    ExpenseSchema,
+    ExpenseUpdateSchema,
+)
 from src.domain.expense.service import ExpenseService
 from src.models import User
 
@@ -39,10 +43,10 @@ async def get_expense(
     return await service.get_by_id(expense_id, current_user.uid)
 
 
-@router.put("/{expense_id}", response_model=ExpenseSchema)
+@router.patch("/{expense_id}", response_model=ExpenseSchema)
 async def update_expense(
     expense_id: int,
-    payload: ExpenseCreateSchema,
+    payload: ExpenseUpdateSchema,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

@@ -6,8 +6,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from src.common import BaseService
 from src.common.base_service import Model
 from src.models import Category
-from src.domain.category.schemas import CategoryCreateSchema, CategorySchema
-from src.errors.main import EntityNotFoundException, DatabaseException
+from src.domain.category.schemas import (
+    CategoryCreateSchema,
+    CategorySchema,
+    CategoryUpdateSchema,
+)
+from src.exceptions import EntityNotFoundException, DatabaseException
 
 
 class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema]):
@@ -31,10 +35,12 @@ class CategoryService(BaseService[Category, CategoryCreateSchema, CategorySchema
         return new_category
 
     async def update(
-        self, object_id: Any, data: CategoryCreateSchema, user_id: UUID
+        self, object_id: Any, data: CategoryUpdateSchema, user_id: UUID
     ) -> Category:
         category = await self.get_by_id(object_id, user_id)
-        for key, value in data.model_dump(exclude={"user_id"}).items():
+        for key, value in data.model_dump(
+            exclude={"user_id"}, exclude_unset=True, exclude_none=True
+        ).items():
             setattr(category, key, value)
         try:
             await self.db.commit()

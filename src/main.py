@@ -11,8 +11,10 @@ from src.db.database import engine
 from src.models import Base
 from src.auth import routes as auth_routes
 from src.domain.expense import routes as expense_routes
+from src.domain.budget import routes as budget_routes
+from src.domain.category import routes as category_routes
 from src.config import settings
-from src.errors.main import AppException
+from src.exceptions import AppException
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +40,8 @@ async def global_app_exception_handler(request: Request, exc: AppException):
         extra={
             "status_code": exc.status_code,
             "error_code": exc.error_code,
-            "message": exc.message,
-            "context": exc.context,
+            # "message": exc.message, # REMOVE , BY ERROR @Deiv888
+            "context": str(exc.context),
             "method": request.method,
             "path": request.url.path,
             "request_id": getattr(request.state, "request_id", None),
@@ -61,6 +63,8 @@ async def global_app_exception_handler(request: Request, exc: AppException):
 
 app.include_router(auth_routes.router)
 app.include_router(expense_routes.router)
+app.include_router(budget_routes.router)
+app.include_router(category_routes.router)
 
 
 # root to try

@@ -1,5 +1,5 @@
 from src.models import Expense
-from src.errors.main import EntityNotFoundException, DatabaseException
+from src.exceptions import EntityNotFoundException, DatabaseException
 from src.common.base_service import BaseService
 from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema
 
@@ -32,7 +32,9 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema]):
         self, object_id: Any, data: ExpenseCreateSchema, user_id: UUID
     ) -> Expense:
         expense = await self.get_by_id(object_id, user_id)
-        for key, value in data.model_dump(exclude={"user_id"}).items():
+        for key, value in data.model_dump(
+            exclude={"user_id"}, exclude_none=True, exclude_unset=True
+        ).items():
             setattr(expense, key, value)
 
         try:

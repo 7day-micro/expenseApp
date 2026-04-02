@@ -48,35 +48,52 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
         self, object_id: Any, data: CreateSchema, user_id: UUID
     ) -> Optional[Model]:
         """
-        id : The ID of the record to update
-        data : The data to update the record with.
-        user_id : The ID of the user performing the operation, used for associating the record
-
+        Update an existing record identified by `object_id` with `data` for the given `user_id`.
+        
+        Parameters:
+            object_id: Identifier of the record to update.
+            data: Payload containing fields to update.
+            user_id: Identifier of the user performing the operation.
+        
+        Returns:
+            The updated `Model` instance.
+        
         Raises:
-            TODO : define custom exception
+            EntityNotFoundException: if the record does not exist.
         """
         pass
 
     @abstractmethod
     async def delete(self, object_id: Any, user_id: UUID) -> Optional[Model]:
         """
-        id : The ID of the record to delete
-        user_id : The ID of the user performing the operation, used for associating the record
+        Delete the record identified by `object_id` that is associated with `user_id`.
+        
+        Parameters:
+            object_id (Any): Identifier of the record to delete.
+            user_id (UUID): Identifier of the user who owns the record; implementers must restrict deletion to this user's records.
+        
+        Returns:
+            Optional[Model]: The deleted model instance if deletion occurred, `None` if no deletion was performed.
+        
         Raises:
-            TODO : define custom exception
+            EntityNotFoundException: If the record does not exist.
         """
         pass
 
     @abstractmethod
     async def get_by_id(self, object_id: Any, user_id: UUID) -> Optional[Model]:
         """
-        id : The ID of the record to retrieve
-        user_id : The ID of the user performing the operation, used for associating the record
-
-
+        Retrieve a single record by its identifier, restricted to the provided user.
+        
+        Parameters:
+            object_id: Identifier of the record to retrieve.
+            user_id: UUID of the user whose scope should be used to filter the record.
+        
+        Returns:
+            The matching model instance.
+        
         Raises:
-            TODO : define custom exception
-
+            EntityNotFoundException: if the record does not exist.
         """
         pass
 
