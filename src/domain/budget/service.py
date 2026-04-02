@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 
-class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema]):
+class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, BudgetUpdateSchema]): #fixed
     async def create(self, data: BudgetCreateSchema, user_id: UUID) -> Budget:
         """
         Create a new Budget from the provided creation schema and persist it to the database.

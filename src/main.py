@@ -79,15 +79,25 @@ if settings.DEBUG:
     )
 
 
+# new handler
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    try:
+        # secure log
+        logger.warning(f"Validation error occurred on endpoint: {request.url.path}")
+        
+        errors = exc.errors()
+        for error in errors:
+            if "input" in error:
+                del error["input"]
 
-    errors = exc.errors()
-    for error in errors:
-        if "input" in error:
-            del error["input"]
-
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-        content={"detail": errors},
-    )
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, # or HTTP_422_UNPROCESSABLE_ENTITY
+            content={"detail": errors},
+        )
+    except Exception as e:
+        logger.error(f"Critical failure in validation handler: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": [{"msg": "Validation error (details hidden for security)"}]},
+        )
