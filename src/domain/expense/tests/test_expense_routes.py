@@ -111,9 +111,11 @@ class TestExpenseRoutes:
         assert expense_from_response.id == created_expense.id
 
     @pytest.mark.asyncio
-    async def test_get_expense_by_id_unauthenticated(self, async_client):
+    async def test_get_expense_by_id_unauthenticated(
+        self, async_client, user, category
+    ):
 
-        created = await async_client.get("/expenses/")
+        created = await async_client.get(f"/expenses/{category.id}")
         assert created.status_code == 401
 
     @pytest.mark.asyncio
