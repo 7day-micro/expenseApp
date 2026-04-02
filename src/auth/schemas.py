@@ -68,12 +68,17 @@ class LoginSchema(BaseModel):
     password: str
 
 
-# JWT Token schema
-class TokenSchema(BaseModel):
-    access_token: str
-    token_type: str
-
-
 # Token data extraction
 class TokenDataSchema(BaseModel):
     user_id: str | None = None
+
+
+# JWT Token schema
+class TokenSchema(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+# refresh frontend
+class RefreshRequestSchema(BaseModel):
+    refresh_token: str
