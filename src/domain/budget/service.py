@@ -28,7 +28,12 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, Budget
         Returns:
             Budget: The persisted Budget instance.
         """
+        if data.category_id is not None:
+            category_service = CategoryService(self.db)
+            category = await category_service.get_by_id(data.category_id, user_id)
+
         new_budget = Budget(**data.model_dump(), user_id=user_id)
+
         try:
             self.db.add(new_budget)
             await self.db.commit()

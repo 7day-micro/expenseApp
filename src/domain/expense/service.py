@@ -12,8 +12,14 @@ from typing import Any
 
 class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema]):
     async def create(self, data: ExpenseCreateSchema, user_id: UUID) -> Expense:
+
+        if data.category_id is not None:
+            category_service = CategoryService(self.db)
+            category = await category_service.get_by_id(data.category_id, user_id)
+
         expense = Expense(**data.model_dump(exclude={"user_id"}))
         expense.user_id = user_id
+
 
         self.db.add(expense)
         try:
