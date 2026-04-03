@@ -20,8 +20,6 @@ class CategorySchema(BaseModel):
 class CategoryCreateSchema(BaseModel):
     name: str
     color_icon: Optional[str]
-    user_id: UUID
-
 
 class CategoryUpdateSchema(BaseModel):
     name: Optional[str] = None
