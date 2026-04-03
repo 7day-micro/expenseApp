@@ -243,3 +243,23 @@ class TestExpenseRoutes:
         authenticated_client.headers.pop("Authorization", None)
         del_resp = await authenticated_client.delete(f"/expenses/{expense_id}")
         assert del_resp.status_code == 401
+
+
+    @pytest.mark.asyncio
+    async def test_404_error_returns_request_id(self, authenticated_client):
+        """
+        Test that requesting a non-existent entity triggers the global exception handler
+        and correctly populates the request_id in the JSON body.
+        """
+        response = await authenticated_client.get("/expenses/999999")
+        
+        assert response.status_code == 404
+        
+        data = response.json()
+        
+        assert data["success"] is False
+        assert "error" in data
+        
+        request_id = data["error"].get("request_id")
+        assert request_id is not None, "request_id should not be null"
+        assert isinstance(request_id, str), "request_id should be a string (UUID)"
