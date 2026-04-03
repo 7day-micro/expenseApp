@@ -1,7 +1,11 @@
 from src.models import Expense
 from src.exceptions import EntityNotFoundException, DatabaseException
 from src.common.base_service import BaseService
-from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema
+from src.domain.expense.schemas import (
+    ExpenseCreateSchema,
+    ExpenseSchema,
+    ExpenseUpdateSchema,
+)
 from src.domain.category.service import CategoryService
 
 from sqlalchemy import select
@@ -10,16 +14,17 @@ from uuid import UUID
 from typing import Any
 
 
-class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema]):
+class ExpenseService(
+    BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema]
+):
     async def create(self, data: ExpenseCreateSchema, user_id: UUID) -> Expense:
 
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = await category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
 
         expense = Expense(**data.model_dump(exclude={"user_id"}))
         expense.user_id = user_id
-
 
         self.db.add(expense)
         try:
@@ -42,7 +47,7 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, Ex
 
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
 
         for key, value in data.model_dump(
             exclude={"user_id"}, exclude_none=True, exclude_unset=True
