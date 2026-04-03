@@ -33,12 +33,31 @@ class TestBudgetService:
     @pytest.mark.asyncio
     async def test_create_budget(self, db_session, valid_budget_payload, user):
         service = BudgetService(db_session)
-        budget = await service.create(
-            data=valid_budget_payload, user_id= user.uid
-        )
+        budget = await service.create(data=valid_budget_payload, user_id=user.uid)
 
         assert budget.amount_limit == valid_budget_payload.amount_limit
         assert budget.category_id == valid_budget_payload.category_id
+
+    @pytest.mark.asyncio
+    async def test_create_budget_invalid_user_id(
+        self, db_session, valid_budget_payload, user
+    ):
+        from uuid import uuid4
+
+        service = BudgetService(db_session)
+
+        with pytest.raises(EntityNotFoundException):
+            await service.create(data=valid_budget_payload, user_id=uuid4())
+
+    @pytest.mark.asyncio
+    async def test_create_budget_invalid_category_id(
+        self, db_session, valid_budget_payload, user
+    ):
+        service = BudgetService(db_session)
+
+        with pytest.raises(EntityNotFoundException):
+            valid_budget_payload.category_id = 99999999
+            await service.create(data=valid_budget_payload, user_id=user.uid)
 
     @pytest.mark.asyncio
     async def test_get_by_id_raises_not_found(self, db_session, user):
@@ -163,3 +182,41 @@ class TestBudgetService:
         assert b1.category_id is not None
         assert b1.amount_limit is not None
         assert b1.month_year is not None
+
+    @pytest.mark.asyncio
+    async def test_update_budget_invalid_user_id(
+        self, db_session, budget, valid_budget_payload, second_user, category
+    ):
+        service = BudgetService(db_session)
+
+        update_data = BudgetUpdateSchema(
+            amount_limit=valid_budget_payload.amount_limit + 10,
+            category_id=category.id,
+            month_year=timedelta(days=30) + valid_budget_payload.month_year,
+        )
+
+        with pytest.raises(EntityNotFoundException):
+            await service.update(
+                object_id=budget.id, data=update_data, user_id=second_user.uid
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_budget_invalid_category_id(
+        self,
+        db_session,
+        budget,
+        valid_budget_payload,
+        user,
+    ):
+        service = BudgetService(db_session)
+
+        update_data = BudgetUpdateSchema(
+            amount_limit=valid_budget_payload.amount_limit + 10,
+            category_id=999999,
+            month_year=timedelta(days=30) + valid_budget_payload.month_year,
+        )
+
+        with pytest.raises(EntityNotFoundException):
+            await service.update(
+                object_id=budget.id, data=update_data, user_id=user.uid
+            )
