@@ -77,12 +77,14 @@ class TestExpenseRoutes:
 
     @pytest.mark.asyncio
     async def test_list_only_own_expenses(
-        self, user_factory, expense_factory, authenticated_client, user, second_user
+        self, user_factory, expense_factory, authenticated_client, user, second_user, category_factory
     ):
-
+        category1 = await category_factory(user_id = user.uid)
+        category2 = await category_factory(user_id = second_user.uid)
+        
         for _ in range(30):
-            await expense_factory(user_id=user.uid)
-            await expense_factory(user_id=second_user.uid)
+            await expense_factory(user_id=user.uid,category_id=category1.id)
+            await expense_factory(user_id=second_user.uid, category_id=category2.id)
 
         response = await authenticated_client.get("/expenses/")
 
@@ -160,9 +162,10 @@ class TestExpenseRoutes:
         valid_expense_payload,
         second_user,
         expense_factory,
+        category
     ):
 
-        expense1 = await expense_factory(user_id=second_user.uid)
+        expense1 = await expense_factory(user_id=second_user.uid, category_id = category.id)
 
         payload = valid_expense_payload
         created = await authenticated_client.post(
@@ -181,10 +184,10 @@ class TestExpenseRoutes:
 
     @pytest.mark.asyncio
     async def test_update_expense_route_unauthenticated(
-        self, async_client, valid_expense_payload, user, expense_factory
+        self, async_client, valid_expense_payload, user, expense_factory, category
     ):
 
-        expense = await expense_factory(user_id=user.uid)
+        expense = await expense_factory(user_id=user.uid, category_id = category.id)
 
         update_payload = ExpenseUpdateSchema(
             amount=valid_expense_payload.amount + Decimal("10.00"), note="Updated note"

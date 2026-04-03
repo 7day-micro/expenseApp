@@ -321,7 +321,7 @@ def valid_budget_payload(category, user):
 
 
 @pytest_asyncio.fixture
-async def budget(db_session, valid_budget_payload):
+async def budget(db_session, valid_budget_payload, user):
     """
     Create and persist a Budget model from the provided budget payload.
 
@@ -333,7 +333,7 @@ async def budget(db_session, valid_budget_payload):
     Returns:
         The persisted Budget instance with database-populated fields (e.g., id, timestamps).
     """
-    budget = Budget(**valid_budget_payload.model_dump())
+    budget = Budget(**valid_budget_payload.model_dump(), user_id = user.uid)
 
     db_session.add(budget)
     await db_session.commit()

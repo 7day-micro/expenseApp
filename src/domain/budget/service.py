@@ -58,11 +58,12 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, Budget
             Budget: The updated Budget instance.
 
         Raises:
-            EntityNotFoundException: If no Budget with the given id exists for the specified user.
+            EntityNotFoundException: If no Budget with the given id exists for the specified user or invalid category_id is provided in the attached data.
         """
-        result = await self.db.get(Category, data.category_id)
-        if not result:
-            raise EntityNotFoundException(object_id=data.category_id, entity_name="Category")
+        if data.category_id is not None:
+            category_service = CategoryService(self.db)
+            await category_service.get_by_id(data.category_id, user_id)
+        
 
         budget = await self.get_by_id(object_id=object_id, user_id=user_id)
 

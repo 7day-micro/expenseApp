@@ -31,21 +31,21 @@ async def second_category(db_session, user, valid_category):
 
 class TestBudgetService:
     @pytest.mark.asyncio
-    async def test_create_budget(self, db_session, valid_budget_payload):
+    async def test_create_budget(self, db_session, valid_budget_payload, user):
         service = BudgetService(db_session)
         budget = await service.create(
-            data=valid_budget_payload, user_id=valid_budget_payload.user_id
+            data=valid_budget_payload, user_id= user.uid
         )
 
         assert budget.amount_limit == valid_budget_payload.amount_limit
         assert budget.category_id == valid_budget_payload.category_id
 
     @pytest.mark.asyncio
-    async def test_get_by_id_raises_not_found(self, db_session, budget):
+    async def test_get_by_id_raises_not_found(self, db_session, user):
         service = BudgetService(db_session)
 
         with pytest.raises(EntityNotFoundException):
-            await service.get_by_id(object_id=999999, user_id=budget.user_id)
+            await service.get_by_id(object_id=999999, user_id=user.uid)
 
     @pytest.mark.asyncio
     async def test_get_by_id(self, db_session, budget, user):
