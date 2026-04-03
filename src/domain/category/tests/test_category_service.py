@@ -101,7 +101,7 @@ class TestCategoryService:
         assert str(updated.user_id) == str(user.uid)
 
     @pytest.mark.asyncio
-    async def test_update_no_update_data(
+    async def test_update_empty_payload(
         self, user_factory, db_session, category_factory
     ):
         service = CategoryService(db_session)
@@ -110,7 +110,15 @@ class TestCategoryService:
         category = await category_factory(user_id=user.uid)
         empty_update = CategoryUpdateSchema()
 
-        await service.update(object_id=category.id, user_id=user.uid, data=empty_update)
+        result = await service.update(
+            object_id=category.id, user_id=user.uid, data=empty_update
+        )
+
+        assert result is not None
+        assert result.name == category.name
+        assert result.color_icon == category.color_icon
+        assert result.user_id == user.uid
+        assert result.id == category.id
 
     @pytest.mark.asyncio
     async def test_get_by_id_raises_for_other_user(self, category, db_session):

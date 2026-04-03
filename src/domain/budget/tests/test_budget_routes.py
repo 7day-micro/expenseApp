@@ -31,6 +31,7 @@ async def create_budget_request(authenticated_client, budget_payload):
 
     return _factory
 
+
 class TestBudgetRoutes:
     @pytest.mark.asyncio
     async def test_create_budget(self, create_budget_request, user, budget_payload):
@@ -147,27 +148,45 @@ class TestBudgetRoutes:
         assert str(updated.user_id) == str(user.uid)
 
     @pytest.mark.asyncio
-    async def test_update_budget_invalid_data(
-        self, create_budget_request, authenticated_client, budget_update_payload, user
+    async def test_update_budget_invalid_category_id(
+        self,
+        create_budget_request,
+        authenticated_client,
     ):
         created = await create_budget_request()
         assert created.status_code == 201
         created_budget = BudgetSchema.model_validate(created.json())
 
-        created_budget.category_id = 99999999
+        created_budget.category_id = 999999
 
         update_response = await authenticated_client.patch(
             f"{BUDGET_BASE_PATH}/{created_budget.id}",
             data=created_budget.model_dump_json(),
         )
 
-        assert update_response.status_code == 404  #since EntityNotFoundException returns 404. 
+        assert update_response.status_code == 404
 
-        # updated = BudgetSchema.model_validate(update_response.json())
-        # assert updated.id == created_budget.id
-        # assert updated.amount_limit == budget_update_payload.amount_limit
-        # assert updated.month_year == budget_update_payload.month_year
-        # assert str(updated.user_id) == str(user.uid)
+    @pytest.mark.asyncio
+    async def test_update_budget_invalid_user_id(
+        self,
+        create_budget_request,
+        authenticated_client,
+        authenticated_client_factory,
+        user_factory,
+    ):
+        user1 = await user_factory()
+        client1 = await authenticated_client_factory(user1)
+
+        created = await create_budget_request()
+        assert created.status_code == 201
+        created_budget = BudgetSchema.model_validate(created.json())
+
+        update_response = await client1.patch(
+            f"{BUDGET_BASE_PATH}/{created_budget.id}",
+            data=created_budget.model_dump_json(),
+        )
+
+        assert update_response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_user_cannot_update_other_user_budget(

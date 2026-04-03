@@ -21,6 +21,8 @@ from src.auth.schemas import LoginSchema
 
 from faker import Faker
 
+A_VALID_PASSWORD = "StrongePassWord123#"
+
 
 @pytest_asyncio.fixture
 async def db_session():
@@ -59,7 +61,7 @@ def valid_user():
     return UserCreateSchema(
         username="testuser",
         email="expenseapp@example.com",
-        password="StrongePassWord123#",
+        password=A_VALID_PASSWORD,
     )
 
 
@@ -137,7 +139,7 @@ async def user_factory(db_session):
 
     fake = Faker()
 
-    async def _factory(username=None, email=None, password="StrongPass123#"):
+    async def _factory(username=None, email=None, password=A_VALID_PASSWORD):
         """
         Create and persist a User with optional username, email, and password, and return the created instance.
 
@@ -333,7 +335,7 @@ async def budget(db_session, valid_budget_payload, user):
     Returns:
         The persisted Budget instance with database-populated fields (e.g., id, timestamps).
     """
-    budget = Budget(**valid_budget_payload.model_dump(), user_id = user.uid)
+    budget = Budget(**valid_budget_payload.model_dump(), user_id=user.uid)
 
     db_session.add(budget)
     await db_session.commit()
@@ -400,7 +402,7 @@ async def authenticated_client(async_client, user, valid_user):
 async def authenticated_client_factory(db_session):
     clients = []
 
-    async def _factory(user, password="StrongePassWord123#"):
+    async def _factory(user, password=A_VALID_PASSWORD):
         client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
         client.headers.update({"Content-Type": "application/json"})
         app.dependency_overrides[get_db] = lambda: db_session
