@@ -60,12 +60,11 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, Budget
         Raises:
             EntityNotFoundException: If no Budget with the given id exists for the specified user or invalid category_id is provided in the attached data.
         """
+        budget = await self.get_by_id(object_id=object_id, user_id=user_id)
+        
         if data.category_id is not None:
             category_service = CategoryService(self.db)
             await category_service.get_by_id(data.category_id, user_id)
-        
-
-        budget = await self.get_by_id(object_id=object_id, user_id=user_id)
 
         for key, value in data.model_dump(
             exclude_unset=True, exclude_none=True
