@@ -2,6 +2,7 @@ from src.models import Expense
 from src.exceptions import EntityNotFoundException, DatabaseException
 from src.common.base_service import BaseService
 from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema
+from src.domain.category.service import CategoryService
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -32,6 +33,11 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, Ex
         self, object_id: Any, data: ExpenseUpdateSchema, user_id: UUID
     ) -> Expense:
         expense = await self.get_by_id(object_id, user_id)
+
+        if data.category_id is not None:
+            category_service = CategoryService(self.db)
+            category = category_service.get_by_id(data.category_id, user_id)
+
         for key, value in data.model_dump(
             exclude={"user_id"}, exclude_none=True, exclude_unset=True
         ).items():
