@@ -8,6 +8,7 @@ A FastAPI-powered expense tracking API that helps users manage their finances by
 
 - [Development Setup](`#development-setup`)
 - [Database Setup](`#database-setup`)
+- [Migrations] (``)
 - [Running the App](#-running-the-app)
 - [Testing](#-testing)
 - [Code Quality](#-code-quality)
@@ -79,6 +80,28 @@ docker compose up -d
 
 ---
 
+## Migrations (Alembic)
+1. Create a new migration after making changes to your SQLAlchemy models:
+```bash
+uv run alembic revision --autogenerate -m "describe your change here"
+```
+
+2. Apply migrations (upgrade to head):
+```bash
+uv run alembic upgrade head
+```
+
+### Other useful commands
+```bash
+# Check current migration version applied to the DB
+uv run alembic current
+
+# See migration history
+uv run alembic history
+
+# Roll back one migration
+uv run alembic downgrade -1
+```
 ## 🚀 Running the App
 
 ### Mac/Linux

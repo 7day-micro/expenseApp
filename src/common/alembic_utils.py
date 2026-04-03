@@ -13,11 +13,6 @@ def load_models():
         # 🔥 prepend "src"
         full_module_name = f"src.{module_name}"
 
-        print(f"Importing: {full_module_name}")
         import_module(full_module_name)
 
     configure_mappers()
-
-
-if __name__ == "__main__":
-    load_models()
