@@ -8,7 +8,7 @@ A FastAPI-powered expense tracking API that helps users manage their finances by
 
 - [Development Setup](`#development-setup`)
 - [Database Setup](`#database-setup`)
-- [Migrations] (``)
+- [Database Migrations](#database-migrations)
 - [Running the App](#-running-the-app)
 - [Testing](#-testing)
 - [Code Quality](#-code-quality)
@@ -80,7 +80,8 @@ docker compose up -d
 
 ---
 
-## Migrations (Alembic)
+## Database Migrations
+
 1. Create a new migration after making changes to your SQLAlchemy models:
 ```bash
 uv run alembic revision --autogenerate -m "describe your change here"
