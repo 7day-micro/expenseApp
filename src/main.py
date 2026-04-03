@@ -88,7 +88,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         for error in errors:
             if "input" in error:
                 del error["input"]
-
+            if "ctx" in error:
+                del error["ctx"]
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,  # or HTTP_422_UNPROCESSABLE_ENTITY
             content={"detail": errors},
