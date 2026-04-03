@@ -30,7 +30,7 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, Budget
         """
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = category_service.get_by_id(data.category_id, user_id)
+            category = await category_service.get_by_id(data.category_id, user_id)
 
         new_budget = Budget(**data.model_dump(), user_id=user_id)
 
