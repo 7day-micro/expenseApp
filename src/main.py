@@ -15,6 +15,7 @@ from src.domain.budget import routes as budget_routes
 from src.domain.category import routes as category_routes
 from src.config import settings
 from src.exceptions import AppException
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Expense App API", description="Backend", version="1.0.0", lifespan=lifespan
 )
+
+@app.middleware("http")
+async def add_request_id_middleware(request: Request, call_next):
+
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    
+    request.state.request_id = request_id
+    
+    response = await call_next(request)
+    
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 
 @app.exception_handler(AppException)
