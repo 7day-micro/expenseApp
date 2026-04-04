@@ -10,13 +10,14 @@ from src.exceptions import EntityNotFoundException, DatabaseException
 from src.models import Budget
 from src.common import BaseService
 from src.domain.category.service import CategoryService
-from src.models import Category
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 
-class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, BudgetUpdateSchema]): #fixed
+class BudgetService(
+    BaseService[Budget, BudgetCreateSchema, BudgetSchema, BudgetUpdateSchema]
+):  # fixed
     async def create(self, data: BudgetCreateSchema, user_id: UUID) -> Budget:
         """
         Create a new Budget from the provided creation schema and persist it to the database.
@@ -30,7 +31,7 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, Budget
         """
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = await category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
 
         new_budget = Budget(**data.model_dump(), user_id=user_id)
 
@@ -66,7 +67,7 @@ class BudgetService(BaseService[Budget, BudgetCreateSchema, BudgetSchema, Budget
             EntityNotFoundException: If no Budget with the given id exists for the specified user or invalid category_id is provided in the attached data.
         """
         budget = await self.get_by_id(object_id=object_id, user_id=user_id)
-        
+
         if data.category_id is not None:
             category_service = CategoryService(self.db)
             await category_service.get_by_id(data.category_id, user_id)

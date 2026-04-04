@@ -3,7 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.oauth2 import get_current_user
 from src.db.database import get_db
-from src.domain.budget.schemas import BudgetUpdateSchema, BudgetCreateSchema, BudgetSchema
+from src.domain.budget.schemas import (
+    BudgetUpdateSchema,
+    BudgetCreateSchema,
+    BudgetSchema,
+)
 from src.domain.budget.service import BudgetService
 from src.models import User
 

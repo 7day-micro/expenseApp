@@ -79,6 +79,7 @@ class TokenSchema(BaseModel):
     refresh_token: str
     token_type: str
 
+
 # refresh frontend
 class RefreshRequestSchema(BaseModel):
     refresh_token: str

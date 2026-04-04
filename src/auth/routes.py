@@ -25,7 +25,7 @@ async def login(
     user_credentials: schemas.LoginSchema,
     db: AsyncSession = Depends(get_db),
 ):
-    #update
+    # update
     tokens = await service.login_user_service(user_credentials, db)
     return tokens
 
@@ -39,11 +39,10 @@ async def get_me(user: schemas.UserResponseSchema = Depends(get_current_user)):
 # new refresh token router
 @router.post("/refresh", response_model=schemas.TokenSchema)
 async def refresh_token(
-    token_data: schemas.RefreshRequestSchema,
-    db: AsyncSession = Depends(get_db)
+    token_data: schemas.RefreshRequestSchema, db: AsyncSession = Depends(get_db)
 ):
     """
-    Endpoint used by the frontend to obtain a new access token 
+    Endpoint used by the frontend to obtain a new access token
     when the previous one expires, using a valid refresh token.
     """
     tokens = await service.refresh_token_service(token_data.refresh_token, db)

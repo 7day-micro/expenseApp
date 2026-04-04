@@ -422,5 +422,3 @@ async def authenticated_client_factory(db_session):
 
     for client in clients:
         await client.aclose()
-
-

@@ -45,19 +45,22 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
 
     @abstractmethod
     async def update(
-        self, object_id: Any, data: UpdateSchema, user_id: UUID #FIXED
+        self,
+        object_id: Any,
+        data: UpdateSchema,
+        user_id: UUID,  # FIXED
     ) -> Optional[Model]:
         """
         Update an existing record identified by `object_id` with `data` for the given `user_id`.
-        
+
         Parameters:
             object_id: Identifier of the record to update.
             data: Payload containing fields to update.
             user_id: Identifier of the user performing the operation.
-        
+
         Returns:
             The updated `Model` instance.
-        
+
         Raises:
             EntityNotFoundException: if the record does not exist.
         """
@@ -67,14 +70,14 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
     async def delete(self, object_id: Any, user_id: UUID) -> Optional[Model]:
         """
         Delete the record identified by `object_id` that is associated with `user_id`.
-        
+
         Parameters:
             object_id (Any): Identifier of the record to delete.
             user_id (UUID): Identifier of the user who owns the record; implementers must restrict deletion to this user's records.
-        
+
         Returns:
             Optional[Model]: The deleted model instance if deletion occurred, `None` if no deletion was performed.
-        
+
         Raises:
             EntityNotFoundException: If the record does not exist.
         """
@@ -84,14 +87,14 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
     async def get_by_id(self, object_id: Any, user_id: UUID) -> Optional[Model]:
         """
         Retrieve a single record by its identifier, restricted to the provided user.
-        
+
         Parameters:
             object_id: Identifier of the record to retrieve.
             user_id: UUID of the user whose scope should be used to filter the record.
-        
+
         Returns:
             The matching model instance.
-        
+
         Raises:
             EntityNotFoundException: if the record does not exist.
         """

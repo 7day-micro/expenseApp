@@ -21,6 +21,7 @@ class CategoryCreateSchema(BaseModel):
     name: str
     color_icon: Optional[str]
 
+
 class CategoryUpdateSchema(BaseModel):
     name: Optional[str] = None
     color_icon: Optional[str] = None
