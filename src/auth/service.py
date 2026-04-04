@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from jose import jwt, JWTError
@@ -37,6 +38,32 @@ async def create_user_service(user_credentials: UserCreateSchema, db: AsyncSessi
 async def login_user_service(user_credentials: LoginSchema, db: AsyncSession):
     # user
     result = await db.execute(select(User).filter(User.email == user_credentials.email))
+    user = result.scalars().first()
+
+    # credentials
+    if not user or not oauth2.verify_password(
+        user_credentials.password, user.password_hash
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials"
+        )
+
+    # 2 token
+    access_token = oauth2.create_access_token(data={"user_id": str(user.uid)})
+    refresh_token = oauth2.create_refresh_token(data={"user_id": str(user.uid)})
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
+
+async def login_oauth(user_credentials: OAuth2PasswordRequestForm, db: AsyncSession):
+    # user
+    result = await db.execute(
+        select(User).filter(User.email == user_credentials.username)
+    )
     user = result.scalars().first()
 
     # credentials

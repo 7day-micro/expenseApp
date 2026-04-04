@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from fastapi.security import OAuth2PasswordRequestForm
 from src.db.database import get_db
 from src.auth import schemas, service
 from src.auth.oauth2 import get_current_user
@@ -25,8 +25,26 @@ async def login(
     user_credentials: schemas.LoginSchema,
     db: AsyncSession = Depends(get_db),
 ):
-    #update
+    # update
     tokens = await service.login_user_service(user_credentials, db)
+    return tokens
+
+
+@router.post("/oauth2/login", response_model=schemas.TokenSchema)
+async def login_oauth(
+    user_credentials: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+
+    Since the problems faced by front-end with login requiring formData for login flow
+    the payload for login was replaced by custom LoginSchema, that solves the problem for login with json payload.
+    However, for OAUth2 login flow, the formData is still required, so for the OAuth2 login flow, the endpoint is still using OAuth2PasswordRequestForm
+    but its now has a seperated route -> /auth/oauth2/login
+
+    """
+
+    tokens = await service.login_oauth(user_credentials, db)
     return tokens
 
 
@@ -39,11 +57,10 @@ async def get_me(user: schemas.UserResponseSchema = Depends(get_current_user)):
 # new refresh token router
 @router.post("/refresh", response_model=schemas.TokenSchema)
 async def refresh_token(
-    token_data: schemas.RefreshRequestSchema,
-    db: AsyncSession = Depends(get_db)
+    token_data: schemas.RefreshRequestSchema, db: AsyncSession = Depends(get_db)
 ):
     """
-    Endpoint used by the frontend to obtain a new access token 
+    Endpoint used by the frontend to obtain a new access token
     when the previous one expires, using a valid refresh token.
     """
     tokens = await service.refresh_token_service(token_data.refresh_token, db)
