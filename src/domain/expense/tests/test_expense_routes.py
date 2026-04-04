@@ -6,7 +6,9 @@ from src.domain.expense.schemas import ExpenseUpdateSchema, ExpenseSchema
 
 class TestExpenseRoutes:
     @pytest.mark.asyncio
-    async def test_create(self, authenticated_client, user, valid_expense_payload):
+    async def test_create_valid(
+        self, authenticated_client, user, valid_expense_payload
+    ):
         payload = valid_expense_payload
 
         response = await authenticated_client.post(
@@ -14,11 +16,32 @@ class TestExpenseRoutes:
         )
 
         assert response.status_code == 201
+
         data = ExpenseSchema.model_validate(response.json())
 
         assert data.id is not None
         assert str(data.user_id) == str(user.uid)
-        assert data.category_id == payload.category_id
+        assert data.category.id == payload.category_id
+
+    @pytest.mark.asyncio
+    async def test_create_without_category(
+        self, authenticated_client, user, valid_expense_payload
+    ):
+        payload = valid_expense_payload
+        payload.category_id = None
+
+        response = await authenticated_client.post(
+            "/expenses/", data=payload.model_dump_json()
+        )
+
+        assert response.status_code == 201
+
+        data = ExpenseSchema.model_validate(response.json())
+
+        assert data.id is not None
+        assert str(data.user_id) == str(user.uid)
+
+        assert data.category is None
 
     @pytest.mark.asyncio
     async def test_create_invalid_payload(
@@ -77,13 +100,19 @@ class TestExpenseRoutes:
 
     @pytest.mark.asyncio
     async def test_list_only_own_expenses(
-        self, user_factory, expense_factory, authenticated_client, user, second_user, category_factory
+        self,
+        user_factory,
+        expense_factory,
+        authenticated_client,
+        user,
+        second_user,
+        category_factory,
     ):
-        category1 = await category_factory(user_id = user.uid)
-        category2 = await category_factory(user_id = second_user.uid)
-        
+        category1 = await category_factory(user_id=user.uid)
+        category2 = await category_factory(user_id=second_user.uid)
+
         for _ in range(30):
-            await expense_factory(user_id=user.uid,category_id=category1.id)
+            await expense_factory(user_id=user.uid, category_id=category1.id)
             await expense_factory(user_id=second_user.uid, category_id=category2.id)
 
         response = await authenticated_client.get("/expenses/")
@@ -127,8 +156,8 @@ class TestExpenseRoutes:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_update_expense_route(
-        self, authenticated_client, user, valid_expense_payload
+    async def test_update(
+        self, authenticated_client, user, valid_expense_payload, category_factory
     ):
         payload = valid_expense_payload
         created = await authenticated_client.post(
@@ -137,8 +166,48 @@ class TestExpenseRoutes:
         assert created.status_code == 201
         expense = ExpenseSchema.model_validate(created.json())
 
+        category2 = await category_factory(user_id=user.uid)
+
         update_payload = ExpenseUpdateSchema(
-            amount=valid_expense_payload.amount + Decimal("10.00"), note="Updated note"
+            amount=valid_expense_payload.amount + Decimal("10.00"),
+            note="Updated note",
+            category_id=category2.id,
+        )
+        update_resp = await authenticated_client.patch(
+            f"/expenses/{expense.id}",
+            data=update_payload.model_dump_json(exclude_defaults=True),
+        )
+
+        assert update_resp.status_code == 200
+
+        expense_response = ExpenseSchema.model_validate(update_resp.json())
+
+        assert expense_response.amount == update_payload.amount
+        assert expense_response.note == update_payload.note
+        assert expense_response.id == expense.id
+        assert expense_response.user_id == user.uid
+        assert expense_response.category.id == category2.id
+
+    @pytest.mark.asyncio
+    async def test_update_expense_category_id(
+        self, authenticated_client, user, valid_expense_payload, category_factory
+    ):
+
+        second_category = await category_factory(user_id=user.uid)
+
+        payload = valid_expense_payload
+        created = await authenticated_client.post(
+            "/expenses/", data=payload.model_dump_json()
+        )
+        assert created.status_code == 201
+        expense = ExpenseSchema.model_validate(created.json())
+
+        assert expense.category.id != second_category.id
+
+        update_payload = ExpenseUpdateSchema(
+            amount=valid_expense_payload.amount + Decimal("10.00"),
+            note="Updated note",
+            category_id=second_category.id,
         )
         update_resp = await authenticated_client.patch(
             f"/expenses/{expense.id}", data=update_payload.model_dump_json()
@@ -152,20 +221,96 @@ class TestExpenseRoutes:
         assert expense_response.note == update_payload.note
         assert expense_response.id == expense.id
         assert expense_response.user_id == user.uid
-        assert expense_response.category_id == payload.category_id
+        assert expense_response.category.id == second_category.id
+
+    @pytest.mark.asyncio
+    async def test_update_expense_invalid_category_id(
+        self, authenticated_client, user, valid_expense_payload, category_factory
+    ):
+
+        second_category = await category_factory(user_id=user.uid)
+
+        payload = valid_expense_payload
+        created = await authenticated_client.post(
+            "/expenses/", data=payload.model_dump_json()
+        )
+        assert created.status_code == 201
+        expense = ExpenseSchema.model_validate(created.json())
+
+        update_payload = ExpenseUpdateSchema(category_id=second_category.id + 1)
+        update_resp = await authenticated_client.patch(
+            f"/expenses/{expense.id}", data=update_payload.model_dump_json()
+        )
+
+        assert update_resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_update_expense_invalid_user_id(
+        self,
+        authenticated_client,
+        second_user,
+        valid_expense_payload,
+        authenticated_client_factory,
+    ):
+        client2 = await authenticated_client_factory(second_user)
+
+        payload = valid_expense_payload
+        created = await authenticated_client.post(
+            "/expenses/", data=payload.model_dump_json()
+        )
+        assert created.status_code == 201
+        expense = ExpenseSchema.model_validate(created.json())
+
+        update_payload = ExpenseUpdateSchema(
+            category_id=valid_expense_payload.category_id
+        )
+
+        # USER ID for this request should be of `second_user` which is different from the `user_id`
+        # associated with the `expense` created above. This should lead to a 404 since users can only
+        # update their own expenses.
+
+        update_resp = await client2.patch(
+            f"/expenses/{expense.id}", data=update_payload.model_dump_json()
+        )
+
+        assert update_resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_update_expense_set_category_to_none(
+        self, authenticated_client, valid_expense_payload
+    ):
+
+        payload = valid_expense_payload
+        created = await authenticated_client.post(
+            "/expenses/", data=payload.model_dump_json()
+        )
+        assert created.status_code == 201
+        expense = ExpenseSchema.model_validate(created.json())
+
+        update_payload = ExpenseUpdateSchema(category_id=None)
+
+        update_resp = await authenticated_client.patch(
+            f"/expenses/{expense.id}", data=update_payload.model_dump_json()
+        )
+
+        expense_updated = ExpenseSchema.model_validate(update_resp.json())
+
+        assert update_resp.status_code == 200
+        assert expense_updated.category is None
 
     @pytest.mark.asyncio
     async def test_user_update_other_user_expense(
         self,
         authenticated_client,
-        user,
         valid_expense_payload,
         second_user,
         expense_factory,
-        category
+        category,
     ):
 
-        expense1 = await expense_factory(user_id=second_user.uid, category_id = category.id)
+        expense1 = await expense_factory(
+            user_id=second_user.uid, category_id=category.id
+        )
 
         payload = valid_expense_payload
         created = await authenticated_client.post(
@@ -187,7 +332,7 @@ class TestExpenseRoutes:
         self, async_client, valid_expense_payload, user, expense_factory, category
     ):
 
-        expense = await expense_factory(user_id=user.uid, category_id = category.id)
+        expense = await expense_factory(user_id=user.uid, category_id=category.id)
 
         update_payload = ExpenseUpdateSchema(
             amount=valid_expense_payload.amount + Decimal("10.00"), note="Updated note"
@@ -244,7 +389,6 @@ class TestExpenseRoutes:
         del_resp = await authenticated_client.delete(f"/expenses/{expense_id}")
         assert del_resp.status_code == 401
 
-
     @pytest.mark.asyncio
     async def test_404_error_returns_request_id(self, authenticated_client):
         """
@@ -252,14 +396,14 @@ class TestExpenseRoutes:
         and correctly populates the request_id in the JSON body.
         """
         response = await authenticated_client.get("/expenses/999999")
-        
+
         assert response.status_code == 404
-        
+
         data = response.json()
-        
+
         assert data["success"] is False
         assert "error" in data
-        
+
         request_id = data["error"].get("request_id")
         assert request_id is not None, "request_id should not be null"
         assert isinstance(request_id, str), "request_id should be a string (UUID)"

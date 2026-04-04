@@ -1,7 +1,11 @@
 from src.models import Expense
 from src.exceptions import EntityNotFoundException, DatabaseException
 from src.common.base_service import BaseService
-from src.domain.expense.schemas import ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema
+from src.domain.expense.schemas import (
+    ExpenseCreateSchema,
+    ExpenseSchema,
+    ExpenseUpdateSchema,
+)
 from src.domain.category.service import CategoryService
 
 from sqlalchemy import select
@@ -10,16 +14,17 @@ from uuid import UUID
 from typing import Any
 
 
-class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema]):
+class ExpenseService(
+    BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, ExpenseUpdateSchema]
+):
     async def create(self, data: ExpenseCreateSchema, user_id: UUID) -> Expense:
 
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = await category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
 
         expense = Expense(**data.model_dump(exclude={"user_id"}))
         expense.user_id = user_id
-
 
         self.db.add(expense)
         try:
@@ -42,12 +47,22 @@ class ExpenseService(BaseService[Expense, ExpenseCreateSchema, ExpenseSchema, Ex
 
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
+
+        # Since exclude_none will ignore all fields
+        # and sometimes we want get category_id set to None
+        # The use of exclude_none here is not suitable
+        # So we need to manually loop through the fields and set
+        # them if they are not None (except for category_id which can be set to None)
 
         for key, value in data.model_dump(
-            exclude={"user_id"}, exclude_none=True, exclude_unset=True
+            exclude={"user_id"}, exclude_unset=True
         ).items():
-            setattr(expense, key, value)
+            # Ensure only category_id can be set to None, other fields will be ignored if None
+            if key == "category_id" and value is None:
+                setattr(expense, "category_id", value)
+            elif value is not None:
+                setattr(expense, key, value)
 
         try:
             await self.db.commit()
