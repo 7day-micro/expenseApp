@@ -19,7 +19,7 @@ class ExpenseSchema(BaseModel):
     updated_at: datetime
     note: str
 
-    category: Optional[CategorySchema] = CategorySchema | None
+    category: Optional[CategorySchema] = None
 
 
 class ExpenseCreateSchema(BaseModel):

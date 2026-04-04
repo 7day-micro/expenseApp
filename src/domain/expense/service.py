@@ -52,7 +52,7 @@ class ExpenseService(
         # Since exclude_none will ignore all fields
         # and sometimes we want get category_id set to None
         # The use of exclude_none here is not suitable
-        # SO we need to manually loop through the fields and set
+        # So we need to manually loop through the fields and set
         # them if they are not None (except for category_id which can be set to None)
 
         for key, value in data.model_dump(

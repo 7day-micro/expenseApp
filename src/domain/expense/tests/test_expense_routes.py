@@ -289,10 +289,6 @@ class TestExpenseRoutes:
 
         update_payload = ExpenseUpdateSchema(category_id=None)
 
-        # USER ID for this request should be of `second_user` which is different from the `user_id`
-        # associated with the `expense` created above. This should lead to a 404 since users can only
-        # update their own expenses.
-
         update_resp = await authenticated_client.patch(
             f"/expenses/{expense.id}", data=update_payload.model_dump_json()
         )
