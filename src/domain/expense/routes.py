@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
 from datetime import date
 from decimal import Decimal
+
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.oauth2 import get_current_user
 from src.db.database import get_db
@@ -31,11 +31,11 @@ async def create_expense(
 async def list_expenses(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    date: Optional[date] = None,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
-    min_value: Optional[Decimal] = None,
-    max_value: Optional[Decimal] = None,
+    date: date | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    min_value: Decimal | None = None,
+    max_value: Decimal | None = None,
 ):
     service = ExpenseService(db)
     return await service.get_all(
@@ -44,7 +44,7 @@ async def list_expenses(
         start_date=start_date,
         end_date=end_date,
         min_value=min_value,
-        max_value=max_value
+        max_value=max_value,
     )
 
 
