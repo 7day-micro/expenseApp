@@ -1,7 +1,9 @@
-import pytest
+from datetime import UTC
 from decimal import Decimal
 
-from src.domain.expense.schemas import ExpenseUpdateSchema, ExpenseSchema
+import pytest
+
+from src.domain.expense.schemas import ExpenseSchema, ExpenseUpdateSchema
 
 
 class TestExpenseRoutes:
@@ -407,3 +409,52 @@ class TestExpenseRoutes:
         request_id = data["error"].get("request_id")
         assert request_id is not None, "request_id should not be null"
         assert isinstance(request_id, str), "request_id should be a string (UUID)"
+
+    @pytest.mark.asyncio
+    async def test_list_expenses_with_filters(
+        self, authenticated_client, user, category_factory, expense_factory
+    ):
+        from datetime import datetime
+
+        category = await category_factory(user_id=user.uid)
+
+        await expense_factory(
+            user_id=user.uid,
+            category_id=category.id,
+            amount=Decimal("10.00"),
+            transaction_date=datetime(2023, 1, 1, tzinfo=UTC),
+        )
+        await expense_factory(
+            user_id=user.uid,
+            category_id=category.id,
+            amount=Decimal("50.00"),
+            transaction_date=datetime(2023, 1, 15, tzinfo=UTC),
+        )
+        await expense_factory(
+            user_id=user.uid,
+            category_id=category.id,
+            amount=Decimal("100.00"),
+            transaction_date=datetime(2023, 1, 31, tzinfo=UTC),
+        )
+
+        resp_value = await authenticated_client.get(
+            "/expenses/?min_value=20&max_value=80"
+        )
+        assert resp_value.status_code == 200
+        data_value = resp_value.json()
+        assert len(data_value) == 1
+        assert data_value[0]["amount"] == "50.00"
+
+        resp_range = await authenticated_client.get(
+            "/expenses/?start_date=2023-01-10&end_date=2023-01-20"
+        )
+        assert resp_range.status_code == 200
+        data_range = resp_range.json()
+        assert len(data_range) == 1
+        assert data_range[0]["amount"] == "50.00"
+
+        resp_exact = await authenticated_client.get("/expenses/?date=2023-01-31")
+        assert resp_exact.status_code == 200
+        data_exact = resp_exact.json()
+        assert len(data_exact) == 1
+        assert data_exact[0]["amount"] == "100.00"
