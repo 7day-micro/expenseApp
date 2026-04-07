@@ -142,9 +142,9 @@ class ExpenseService(
                     func.date(Expense.transaction_date) <= end_date
                 )
 
-        if min_value is not None:
+        if max(0, min_value) is not None:
             statement = statement.where(Expense.amount >= min_value)
-        if max_value is not None:
+        if max(0, max_value) is not None:
             statement = statement.where(Expense.amount <= max_value)
 
         result = await self.db.execute(statement)
