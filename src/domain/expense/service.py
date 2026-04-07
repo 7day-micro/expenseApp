@@ -1,4 +1,8 @@
 from src.models import Expense
+from datetime import date
+from decimal import Decimal
+from typing import Any, Optional
+from sqlalchemy import select, func
 from src.exceptions import EntityNotFoundException, DatabaseException
 from src.common.base_service import BaseService
 from src.domain.expense.schemas import (
@@ -111,7 +115,31 @@ class ExpenseService(
 
         return expense
 
-    async def get_all(self, user_id: UUID) -> list[Expense]:
+    async def get_all(
+        self, 
+        user_id: UUID,
+        date_filter: Optional[date] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        min_value: Optional[Decimal] = None,
+        max_value: Optional[Decimal] = None
+    ) -> list[Expense]:
+
         statement = select(Expense).where(Expense.user_id == user_id)
+        
+        if date_filter is not None:
+            statement = statement.where(func.date(Expense.transaction_date) == date_filter)
+            
+        # Filtri per range di date
+        if start_date is not None:
+            statement = statement.where(func.date(Expense.transaction_date) >= start_date)
+        if end_date is not None:
+            statement = statement.where(func.date(Expense.transaction_date) <= end_date)
+            
+        if min_value is not None:
+            statement = statement.where(Expense.amount >= min_value)
+        if max_value is not None:
+            statement = statement.where(Expense.amount <= max_value)
+
         result = await self.db.execute(statement)
-        return result.scalars().all()
+        return list(result.scalars().all())
