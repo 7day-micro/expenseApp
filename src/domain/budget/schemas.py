@@ -7,9 +7,10 @@ from uuid import UUID
 
 
 class BudgetSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
+    name:str
     user_id: UUID
     amount_limit: Decimal
 
@@ -18,18 +19,19 @@ class BudgetSchema(BaseModel):
 
     category_id: Optional[int]
 
-    class Meta:
-        from_attributes = True
 
 
 class BudgetCreateSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    name:str
     category_id: Optional[int]
     amount_limit: Decimal
     month_year: datetime
 
 
 class BudgetUpdateSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    name: Optional[str] = None
     category_id: Optional[int] = None
     amount_limit: Optional[Decimal] = None
     month_year: Optional[datetime] = None

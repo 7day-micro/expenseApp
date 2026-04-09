@@ -316,6 +316,7 @@ def valid_budget_payload(category, user):
     """
     return BudgetCreateSchema(
         user_id=user.uid,
+        name='Budget',
         category_id=category.id,
         amount_limit=Decimal("12.50"),
         month_year=datetime.now(timezone.utc),
@@ -357,10 +358,11 @@ async def budget_factory(db_session):
     fake = Faker()
 
     async def _factory(
-        user_id=None, category_id=None, amount_limit=None, month_year=None, note=None
+        user_id=None, category_id=None, amount_limit=None, month_year=None, note=None, name=None
     ):
         budget = Budget(
             user_id=user_id,
+            name = fake.name(),
             category_id=category_id,
             amount_limit=amount_limit
             or Decimal(fake.pydecimal(left_digits=3, right_digits=2, positive=True)),
