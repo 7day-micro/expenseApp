@@ -117,8 +117,8 @@ class ExpenseService(
     async def get_all(
         self, 
         user_id: UUID,
-        skip: Optional[int] = 0,
-        limit: Optional[int] = 100,
+        skip: int = 0,
+        limit: Optional[int] = None,
         date_filter: Optional[date] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
@@ -140,7 +140,15 @@ class ExpenseService(
         if max_value is not None:
             statement = statement.where(Expense.amount <= max_value)
 
-        statement = statement.offset(skip).limit(limit)
+        statement = statement.order_by(
+            Expense.transaction_date.desc(),
+            Expense.id.desc()
+        )
+
+        if skip:
+            statement = statement.offset(skip)
+        if limit is not None:
+            statement = statement.limit(limit)
 
         result = await self.db.execute(statement)
         return list(result.scalars().all())
