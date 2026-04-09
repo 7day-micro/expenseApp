@@ -129,19 +129,18 @@ class ExpenseService(
 
         if date_filter is not None:
             statement = statement.where(func.date(Expense.transaction_date) == date_filter)
-        if start_date is not None:
-            statement = statement.where(func.date(Expense.transaction_date) >= start_date)
-        if end_date is not None:
-            statement = statement.where(func.date(Expense.transaction_date) <= end_date)
+        else:
+            if start_date is not None:
+                statement = statement.where(func.date(Expense.transaction_date) >= start_date)
+            if end_date is not None:
+                statement = statement.where(func.date(Expense.transaction_date) <= end_date)
+
         if min_value is not None:
             statement = statement.where(Expense.amount >= min_value)
         if max_value is not None:
             statement = statement.where(Expense.amount <= max_value)
 
-        if skip is not None:
-            statement = statement.offset(skip)
-        if limit is not None:
-            statement = statement.limit(limit)
+        statement = statement.offset(skip).limit(limit)
 
         result = await self.db.execute(statement)
         return list(result.scalars().all())
