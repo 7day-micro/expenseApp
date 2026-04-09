@@ -87,10 +87,10 @@ class Expense(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID, ForeignKey("users.uid"), nullable=False
+        UUID, ForeignKey("users.uid", ondelete="CASCADE"), nullable=False
     )
     category_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("categories.id"), nullable=True
+        Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     transaction_date: Mapped[datetime] = mapped_column(
@@ -116,10 +116,10 @@ class Budget(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID, ForeignKey("users.uid"), nullable=False
+        UUID, ForeignKey("users.uid", ondelete="CASCADE"), nullable=False
     )
     category_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("categories.id"), nullable=True
+        Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     amount_limit: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     month_year: Mapped[datetime] = mapped_column(
