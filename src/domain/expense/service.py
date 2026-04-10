@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -115,37 +115,40 @@ class ExpenseService(
         return expense
 
     async def get_all(
-        self,
+        self, 
         user_id: UUID,
-        date_filter: date | None = None,
-        start_date: date | None = None,
-        end_date: date | None = None,
-        min_value: Decimal | None = None,
-        max_value: Decimal | None = None,
+        skip: int = 0,
+        limit: Optional[int] = None,
+        date_filter: Optional[date] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        min_value: Optional[Decimal] = None,
+        max_value: Optional[Decimal] = None
     ) -> list[Expense]:
-
         statement = select(Expense).where(Expense.user_id == user_id)
 
         if date_filter is not None:
-            statement = statement.where(
-                func.date(Expense.transaction_date) == date_filter
-            )
-
+            statement = statement.where(func.date(Expense.transaction_date) == date_filter)
         else:
-            # Filtri per range di date
             if start_date is not None:
-                statement = statement.where(
-                    func.date(Expense.transaction_date) >= start_date
-                )
+                statement = statement.where(func.date(Expense.transaction_date) >= start_date)
             if end_date is not None:
-                statement = statement.where(
-                    func.date(Expense.transaction_date) <= end_date
-                )
+                statement = statement.where(func.date(Expense.transaction_date) <= end_date)
 
-        if max(0, min_value) is not None:
+        if min_value is not None:
             statement = statement.where(Expense.amount >= min_value)
-        if max(0, max_value) is not None:
+        if max_value is not None:
             statement = statement.where(Expense.amount <= max_value)
+
+        statement = statement.order_by(
+            Expense.transaction_date.desc(),
+            Expense.id.desc()
+        )
+
+        if skip:
+            statement = statement.offset(skip)
+        if limit is not None:
+            statement = statement.limit(limit)
 
         result = await self.db.execute(statement)
         return list(result.scalars().all())
