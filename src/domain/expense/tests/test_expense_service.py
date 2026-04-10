@@ -165,3 +165,48 @@ class TestExpenseService:
         assert update2.amount == Decimal("20.00")
         assert update2.note == "Updated Note"
         assert update2.transaction_date == expense.transaction_date
+
+
+    @pytest.mark.asyncio
+    async def test_expense_on_delete_category_set_null(
+        self, db_session, user, category_factory, expense_factory
+    ):
+        from sqlalchemy import select
+        from src.models import Expense
+
+        category = await category_factory(user_id=user.uid)
+        expense = await expense_factory(user_id=user.uid, category_id=category.id)
+
+        expense_id = expense.id
+
+        await db_session.delete(category)
+        await db_session.commit()
+
+        db_session.expire_all()
+
+        statement = select(Expense).where(Expense.id == expense_id)
+        result = await db_session.execute(statement)
+        updated_expense = result.scalar_one_or_none()
+
+        assert updated_expense is not None
+        assert updated_expense.category_id is None
+
+    @pytest.mark.asyncio
+    async def test_expense_on_delete_user_cascade(
+        self, db_session, user_factory, expense_factory
+    ):
+        from sqlalchemy import select
+        from src.models import Expense
+
+        test_user = await user_factory()
+        
+        expense = await expense_factory(user_id=test_user.uid, category_id=None)
+
+        await db_session.delete(test_user)
+        await db_session.commit()
+
+        statement = select(Expense).where(Expense.id == expense.id)
+        result = await db_session.execute(statement)
+        deleted_expense = result.scalar_one_or_none()
+
+        assert deleted_expense is None
