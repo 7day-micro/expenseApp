@@ -166,7 +166,6 @@ class TestExpenseService:
         assert update2.note == "Updated Note"
         assert update2.transaction_date == expense.transaction_date
 
-
     @pytest.mark.asyncio
     async def test_expense_on_delete_category_set_null(
         self, db_session, user, category_factory, expense_factory
@@ -199,7 +198,7 @@ class TestExpenseService:
         from src.models import Expense
 
         test_user = await user_factory()
-        
+
         expense = await expense_factory(user_id=test_user.uid, category_id=None)
 
         await db_session.delete(test_user)

@@ -107,7 +107,9 @@ class Expense(Base):
     # updated for ASYNC
     user: Mapped["User"] = relationship(back_populates="expenses", lazy="selectin")
     category: Mapped["Category"] = relationship(
-        back_populates="expenses", lazy="selectin" )
+        back_populates="expenses", lazy="selectin"
+    )
+
 
 class Budget(Base):
     __tablename__ = "budgets"
