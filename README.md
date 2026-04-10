@@ -9,6 +9,7 @@ A FastAPI-powered expense tracking API that helps users manage their finances by
 - [Development Setup](`#development-setup`)
 - [Database Setup](`#database-setup`)
 - [Database Migrations](#database-migrations)
+- [Database Seeder](#database-seeder)
 - [Running the App](#-running-the-app)
 - [Testing](#-testing)
 - [Code Quality](#-code-quality)
@@ -103,6 +104,45 @@ uv run alembic history
 # Roll back one migration
 uv run alembic downgrade -1
 ```
+
+## Database Seeder
+
+Use `powerfull_seeder.py` to generate realistic test data for users, categories, budgets, and expenses.
+
+Before running the seeder:
+
+1. Make sure the database container is running.
+2. Make sure migrations are applied (`uv run alembic upgrade head`).
+
+> PASSWORD FOR ALL GENERATED USERS IS : `Valid2026#`
+
+### Available modes (choose one)
+
+- `--seed-new-users`: creates random users and related data.
+- `--seed-existing-users`: adds related data for users already in the database.
+- `--user-email`: seeds data for one specific user email (creates the user if it does not exist).
+
+### Useful options
+
+- `--new-users-count` (default: `8`): number of users created with `--seed-new-users`.
+- `--expenses-per-user` (default: `400`): number of expenses generated for each user.
+
+### Examples
+
+```bash
+# Create 8 random users (default) and seed 400 expenses per user (default)
+uv run python powerfull_seeder.py --seed-new-users
+
+# Create 10 users and 250 expenses per user
+uv run python powerfull_seeder.py --seed-new-users --new-users-count 10 --expenses-per-user 250
+
+# Seed one specific user
+uv run python powerfull_seeder.py --user-email user@example.com --expenses-per-user 120
+
+# Seed all existing users
+uv run python powerfull_seeder.py --seed-existing-users --expenses-per-user 500
+```
+
 ## 🚀 Running the App
 
 ### Mac/Linux
