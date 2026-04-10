@@ -1,25 +1,19 @@
+from datetime import UTC, datetime
 from decimal import Decimal
-from datetime import datetime, timezone
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.auth.schemas import UserCreateSchema
-from src.db.database import SQLALCHEMY_DATABASE_URL, engine_factory
-from src.domain.category.schemas import CategoryCreateSchema
-from src.main import app
-
-from httpx import AsyncClient, ASGITransport
-from src.db.database import get_db
-from src.models import User, Category
-from src.domain.expense.schemas import ExpenseCreateSchema
-from src.domain.budget.schemas import BudgetCreateSchema
-from src.models import Budget, Expense
-
-from src.auth.schemas import LoginSchema
-
-
 from faker import Faker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.auth.schemas import LoginSchema, UserCreateSchema
+from src.db.database import SQLALCHEMY_DATABASE_URL, engine_factory, get_db
+from src.domain.budget.schemas import BudgetCreateSchema
+from src.domain.category.schemas import CategoryCreateSchema
+from src.domain.expense.schemas import ExpenseCreateSchema
+from src.main import app
+from src.models import Budget, Category, Expense, User
 
 A_VALID_PASSWORD = "StrongePassWord123#"
 
@@ -267,7 +261,7 @@ def valid_expense_payload(category):
     return ExpenseCreateSchema(
         category_id=category.id,
         amount=Decimal("12.50"),
-        transaction_date=datetime.now(timezone.utc),
+        transaction_date=datetime.now(UTC),
         note="coffee",
     )
 
@@ -291,7 +285,7 @@ async def expense_factory(db_session):
             category_id=category_id,
             amount=amount
             or Decimal(fake.pydecimal(left_digits=3, right_digits=2, positive=True)),
-            transaction_date=transaction_date or datetime.now(timezone.utc),
+            transaction_date=transaction_date or datetime.now(UTC),
             note=note or fake.sentence(),
         )
         db_session.add(expense)
@@ -319,7 +313,7 @@ def valid_budget_payload(category, user):
         name="Budget",
         category_id=category.id,
         amount_limit=Decimal("12.50"),
-        month_year=datetime.now(timezone.utc),
+        month_year=datetime.now(UTC),
     )
 
 
@@ -370,7 +364,7 @@ async def budget_factory(db_session):
             category_id=category_id,
             amount_limit=amount_limit
             or Decimal(fake.pydecimal(left_digits=3, right_digits=2, positive=True)),
-            month_year=month_year or datetime.now(timezone.utc),
+            month_year=month_year or datetime.now(UTC),
         )
         db_session.add(budget)
         await db_session.commit()

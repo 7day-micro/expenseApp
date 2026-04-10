@@ -1,16 +1,19 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -24,6 +27,7 @@ class User(Base):
 
     __table_args__ = (
         CheckConstraint("role IN ('user', 'admin')", name="ck_users_role_valid"),
+        Index("idx_users_email", "email", unique=True),
     )
 
     uid: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
@@ -57,6 +61,8 @@ class User(Base):
 class Category(Base):
     __tablename__ = "categories"
 
+    __table_args__ = (Index("idx_categories_user_id", "user_id"),)
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID, ForeignKey("users.uid"), nullable=False
@@ -82,6 +88,11 @@ class Category(Base):
 
 class Expense(Base):
     __tablename__ = "expenses"
+
+    __table_args__ = (
+        Index("idx_expenses_user_category", "user_id", "category_id"),
+        Index("idx_expenses_user_date", "user_id", "transaction_date"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -112,6 +123,14 @@ class Expense(Base):
 class Budget(Base):
     __tablename__ = "budgets"
 
+    __table_args__ = (
+        Index("idx_budgets_user_category", "user_id", "category_id"),
+        Index("idx_budgets_user_month_year", "user_id", "month_year"),
+        UniqueConstraint(
+            "user_id", "month_year", "category_id", name="uq_user_category_month"
+        ),
+    )
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(60), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -121,9 +140,7 @@ class Budget(Base):
         Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     amount_limit: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    month_year: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    month_year: Mapped[date] = mapped_column(Date(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
