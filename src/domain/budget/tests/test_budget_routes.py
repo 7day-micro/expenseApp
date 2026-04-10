@@ -5,7 +5,6 @@ import pytest_asyncio
 
 from src.domain.budget.schemas import BudgetSchema, BudgetUpdateSchema
 
-
 BUDGET_BASE_PATH = "/budgets"
 
 
@@ -17,6 +16,7 @@ def budget_payload(valid_budget_payload):
 @pytest.fixture
 def budget_update_payload(valid_budget_payload):
     return BudgetUpdateSchema(
+        name="A new updated Budget Name",
         amount_limit=valid_budget_payload.amount_limit + 10,
         month_year=valid_budget_payload.month_year + timedelta(days=30),
     )
@@ -43,6 +43,7 @@ class TestBudgetRoutes:
         assert data.id is not None
         assert str(data.user_id) == str(user.uid)
         assert data.category_id == budget_payload.category_id
+        assert data.name == budget_payload.name
 
     @pytest.mark.asyncio
     async def test_create_budget_invalid_payload(
@@ -146,6 +147,7 @@ class TestBudgetRoutes:
         assert updated.amount_limit == budget_update_payload.amount_limit
         assert updated.month_year == budget_update_payload.month_year
         assert str(updated.user_id) == str(user.uid)
+        assert updated.name == budget_update_payload.name
 
     @pytest.mark.asyncio
     async def test_update_budget_invalid_category_id(

@@ -107,14 +107,13 @@ class Expense(Base):
     # updated for ASYNC
     user: Mapped["User"] = relationship(back_populates="expenses", lazy="selectin")
     category: Mapped["Category"] = relationship(
-        back_populates="expenses", lazy="selectin"
-    )
-
+        back_populates="expenses", lazy="selectin" )
 
 class Budget(Base):
     __tablename__ = "budgets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(60), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID, ForeignKey("users.uid", ondelete="CASCADE"), nullable=False
     )
