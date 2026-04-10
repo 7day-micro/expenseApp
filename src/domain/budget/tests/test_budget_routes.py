@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 
 from src.domain.budget.schemas import BudgetSchema, BudgetUpdateSchema
+from src.domain.category.service import CategoryService
 
 BUDGET_BASE_PATH = "/budgets"
 
@@ -172,7 +173,6 @@ class TestBudgetRoutes:
     async def test_update_budget_invalid_user_id(
         self,
         create_budget_request,
-        authenticated_client,
         authenticated_client_factory,
         user_factory,
     ):
@@ -250,3 +250,21 @@ class TestBudgetRoutes:
         response = await authenticated_client.delete(f"{BUDGET_BASE_PATH}/{budget_id}")
 
         assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_after_deleted_category_category_id_is_none(
+        self, db_session, user, create_budget_request, authenticated_client
+    ):
+        created = await create_budget_request()
+        pre_updated = BudgetSchema.model_validate(created.json())
+
+        await CategoryService(db_session).delete(
+            object_id=pre_updated.category_id, user_id=user.uid
+        )
+
+        updated = await authenticated_client.get(f"{BUDGET_BASE_PATH}/{pre_updated.id}")
+        budget = BudgetSchema.model_validate(updated.json())
+        assert updated.status_code == 200
+
+        assert budget.category_id is None
+        assert budget.name == updated.json()["name"]
