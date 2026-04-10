@@ -362,12 +362,11 @@ async def budget_factory(db_session):
         category_id=None,
         amount_limit=None,
         month_year=None,
-        note=None,
         name=None,
     ):
         budget = Budget(
             user_id=user_id,
-            name=fake.name(),
+            name=name or fake.name(),
             category_id=category_id,
             amount_limit=amount_limit
             or Decimal(fake.pydecimal(left_digits=3, right_digits=2, positive=True)),

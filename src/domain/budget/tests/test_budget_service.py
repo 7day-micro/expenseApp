@@ -1,13 +1,13 @@
+import copy
+from datetime import timedelta
+
 import pytest
 import pytest_asyncio
-import copy
 
-from src.domain.budget.service import BudgetService
-from src.exceptions import EntityNotFoundException
-
-from src.domain.category.service import CategoryService
 from src.domain.budget.schemas import BudgetUpdateSchema
-from datetime import timedelta
+from src.domain.budget.service import BudgetService
+from src.domain.category.service import CategoryService
+from src.exceptions import EntityNotFoundException
 
 
 @pytest_asyncio.fixture
@@ -220,3 +220,27 @@ class TestBudgetService:
             await service.update(
                 object_id=budget.id, data=update_data, user_id=user.uid
             )
+
+    @pytest.mark.asyncio
+    async def test_deleted_category_set_category_id_null(
+        self, db_session, budget_factory, user, category
+    ):
+        budget1 = await budget_factory(
+            user_id=user.uid, name=None, category_id=category.id
+        )
+        budget2 = await budget_factory(
+            user_id=user.uid, name=None, category_id=category.id
+        )
+        budget3 = await budget_factory(
+            user_id=user.uid, name=None, category_id=category.id
+        )
+
+        loop = budget1, budget2, budget3
+
+        await CategoryService(db_session).delete(
+            object_id=category.id, user_id=user.uid
+        )
+
+        for budget in loop:
+            await db_session.refresh(budget)
+            assert budget.category_id is None
