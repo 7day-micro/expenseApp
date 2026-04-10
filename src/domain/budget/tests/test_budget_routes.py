@@ -256,13 +256,13 @@ class TestBudgetRoutes:
         self, db_session, user, create_budget_request, authenticated_client
     ):
         created = await create_budget_request()
-        budget = BudgetSchema.model_validate(created.json())
+        pre_updated = BudgetSchema.model_validate(created.json())
 
         await CategoryService(db_session).delete(
-            object_id=budget.category_id, user_id=user.uid
+            object_id=pre_updated.category_id, user_id=user.uid
         )
 
-        updated = await authenticated_client.get(f"{BUDGET_BASE_PATH}/{budget.id}")
+        updated = await authenticated_client.get(f"{BUDGET_BASE_PATH}/{pre_updated.id}")
         budget = BudgetSchema.model_validate(updated.json())
         assert updated.status_code == 200
 
