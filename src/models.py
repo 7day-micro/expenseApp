@@ -1,22 +1,22 @@
+import uuid
+from datetime import datetime
 from decimal import Decimal
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
-    Text,
-    String,
     DateTime,
-    func,
-    Numeric,
     ForeignKey,
     Integer,
+    Numeric,
+    String,
+    Text,
+    func,
 )
-from datetime import datetime
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.database import Base
-
-import uuid
 
 
 class User(Base):
@@ -45,15 +45,13 @@ class User(Base):
     )
 
     # updated for ASYNC
-    categories: Mapped[list["Category"]] = relationship(
+    categories: Mapped[list[Category]] = relationship(
         back_populates="user", lazy="selectin"
     )
-    expenses: Mapped[list["Expense"]] = relationship(
+    expenses: Mapped[list[Expense]] = relationship(
         back_populates="user", lazy="selectin"
     )
-    budgets: Mapped[list["Budget"]] = relationship(
-        back_populates="user", lazy="selectin"
-    )
+    budgets: Mapped[list[Budget]] = relationship(back_populates="user", lazy="selectin")
 
 
 class Category(Base):
@@ -73,11 +71,11 @@ class Category(Base):
     )
 
     # updated for ASYNC
-    user: Mapped["User"] = relationship(back_populates="categories", lazy="selectin")
-    expenses: Mapped[list["Expense"]] = relationship(
+    user: Mapped[User] = relationship(back_populates="categories", lazy="selectin")
+    expenses: Mapped[list[Expense]] = relationship(
         back_populates="category", lazy="selectin"
     )
-    budgets: Mapped[list["Budget"]] = relationship(
+    budgets: Mapped[list[Budget]] = relationship(
         back_populates="category", lazy="selectin"
     )
 
@@ -105,8 +103,8 @@ class Expense(Base):
     )
 
     # updated for ASYNC
-    user: Mapped["User"] = relationship(back_populates="expenses", lazy="selectin")
-    category: Mapped["Category"] = relationship(
+    user: Mapped[User] = relationship(back_populates="expenses", lazy="selectin")
+    category: Mapped[Category] = relationship(
         back_populates="expenses", lazy="selectin"
     )
 
@@ -134,7 +132,5 @@ class Budget(Base):
     )
 
     # updated for ASYNC
-    user: Mapped["User"] = relationship(back_populates="budgets", lazy="selectin")
-    category: Mapped["Category"] = relationship(
-        back_populates="budgets", lazy="selectin"
-    )
+    user: Mapped[User] = relationship(back_populates="budgets", lazy="selectin")
+    category: Mapped[Category] = relationship(back_populates="budgets", lazy="selectin")
