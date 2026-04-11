@@ -93,6 +93,7 @@ class Expense(Base):
     __tablename__ = "expenses"
 
     __table_args__ = (
+        Index("idx_expenses_category_id", "category_id"),
         Index("idx_expenses_user_category", "user_id", "category_id"),
         Index("idx_expenses_user_date", "user_id", "transaction_date"),
     )
@@ -106,7 +107,7 @@ class Expense(Base):
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     transaction_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        DateTime(timezone=True), nullable=False, index=True
     )
     note: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -143,7 +144,7 @@ class Budget(Base):
         Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     amount_limit: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    month_year: Mapped[date] = mapped_column(Date(), nullable=False)
+    month_year: Mapped[date] = mapped_column(Date(), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
