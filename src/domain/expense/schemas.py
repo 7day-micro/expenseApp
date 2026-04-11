@@ -47,7 +47,7 @@ class PeriodMetrics(BaseModel):
     daily: dict[date, Decimal]
 
 
-class VariantionMetrics(BaseModel):
+class VariationMetrics(BaseModel):
     from_last_week_total: Decimal
     from_last_week_daily: Decimal
     from_last_month_total: Decimal
@@ -61,7 +61,7 @@ class MetricsOverview(BaseModel):
     current_week: PeriodMetrics
     last_week: PeriodMetrics
 
-    variation: VariantionMetrics
+    variation: VariationMetrics
 
     # COMPARACION
     # last_month_vs_current_month_average_daily_spent: Decimal | None

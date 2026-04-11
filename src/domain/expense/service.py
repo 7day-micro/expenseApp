@@ -1,3 +1,4 @@
+import asyncio
 import calendar
 import datetime
 from decimal import Decimal
@@ -16,7 +17,7 @@ from src.domain.expense.schemas import (
     ExpenseUpdateSchema,
     MetricsOverview,
     PeriodMetrics,
-    VariantionMetrics,
+    VariationMetrics,
 )
 from src.exceptions import DatabaseException, EntityNotFoundException
 from src.models import Expense
@@ -175,7 +176,7 @@ class ExpenseMetricGenerator:
         self.db = db
         self.uid = user_id
 
-    async def get_last_month_dayly_spent(self) -> MetricSchema:
+    async def get_last_month_daily_spent(self) -> MetricSchema:
 
         today = datetime.datetime.now(tz=datetime.UTC).date()
 
@@ -208,17 +209,17 @@ class ExpenseMetricGenerator:
 
         grand_total = sum(row.total for row in rows)
 
-        avarage_per_day = grand_total / month_days_count
+        average_per_day = grand_total / month_days_count
 
         daily = {row.day: row.total for row in rows}
 
         return {
             "days": daily,
             "total": grand_total,
-            "average_daily_spent": avarage_per_day,
+            "average_daily_spent": average_per_day,
         }
 
-    async def get_current_month_dayly_spent(self) -> MetricSchema:
+    async def get_current_month_daily_spent(self) -> MetricSchema:
         today = datetime.datetime.now(tz=datetime.UTC).date()
 
         current_month_first_day = today.replace(day=1)
@@ -254,7 +255,7 @@ class ExpenseMetricGenerator:
             "average_daily_spent": average_daily_spenting,
         }
 
-    async def get_last_week_dayly_spent(self) -> MetricSchema:
+    async def get_last_week_daily_spent(self) -> MetricSchema:
         today = datetime.datetime.now(tz=datetime.UTC).date()
         today_weekday = today.isoweekday()
 
@@ -272,8 +273,8 @@ class ExpenseMetricGenerator:
                 Expense.transaction_date >= passed_week_first_day,
                 Expense.transaction_date < current_week_first_day,
             )
-            .order_by(func.date(Expense.transaction_date))
             .group_by(func.date(Expense.transaction_date))
+            .order_by(func.date(Expense.transaction_date))
         )
 
         result = await self.db.execute(statement=statement)
@@ -289,7 +290,7 @@ class ExpenseMetricGenerator:
             "average_daily_spent": average_daily_spenting,
         }
 
-    async def get_current_week_dayly_spent(self) -> MetricSchema:
+    async def get_current_week_daily_spent(self) -> MetricSchema:
         today = datetime.datetime.now(tz=datetime.UTC).date()
         today_weekday = today.isoweekday()
 
@@ -306,8 +307,8 @@ class ExpenseMetricGenerator:
                 Expense.transaction_date >= current_week_first_day,
                 Expense.transaction_date < today,
             )
-            .order_by(func.date(Expense.transaction_date))
             .group_by(func.date(Expense.transaction_date))
+            .order_by(func.date(Expense.transaction_date))
         )
 
         result = await self.db.execute(statement=statement)
@@ -324,10 +325,12 @@ class ExpenseMetricGenerator:
         }
 
     async def run(self):
-        last_month = await self.get_last_month_dayly_spent()
-        last_week = await self.get_last_week_dayly_spent()
-        current_month = await self.get_current_month_dayly_spent()
-        current_week = await self.get_current_week_dayly_spent()
+        last_month, last_week, current_month, current_week = await asyncio.gather(
+            self.get_last_month_daily_spent(),
+            self.get_last_week_daily_spent(),
+            self.get_current_month_daily_spent(),
+            self.get_current_week_daily_spent(),
+        )
         ## VS ============
         last_week_var_average = ExpenseMetricGenerator.get_past_vs_current(
             last_week.get("average_daily_spent"),
@@ -365,7 +368,7 @@ class ExpenseMetricGenerator:
             daily=last_week.get("days"),
             total=last_week.get("total"),
         )
-        variations = VariantionMetrics(
+        variations = VariationMetrics(
             from_last_week_daily=last_week_var_average,
             from_last_week_total=from_last_week_total,
             from_last_month_daily=from_last_month_daily,
@@ -381,4 +384,4 @@ class ExpenseMetricGenerator:
 
     @staticmethod
     def get_past_vs_current(before: Decimal, current: Decimal):
-        return ((current - before) / (before or 1)) * 100
+        return ((current - before) / (before if before != 0 else 1)) * 100
