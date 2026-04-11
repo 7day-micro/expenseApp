@@ -68,7 +68,9 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID, ForeignKey("users.uid"), nullable=False
+        UUID,
+        ForeignKey("users.uid", ondelete="CASCADE"),
+        nullable=False,
     )
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     color_icon: Mapped[str] = mapped_column(String(50), nullable=True)

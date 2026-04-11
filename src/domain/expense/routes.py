@@ -10,8 +10,9 @@ from src.domain.expense.schemas import (
     ExpenseCreateSchema,
     ExpenseSchema,
     ExpenseUpdateSchema,
+    MetricsOverview,
 )
-from src.domain.expense.service import ExpenseService
+from src.domain.expense.service import ExpenseMetricGenerator, ExpenseService
 from src.models import User
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -46,6 +47,16 @@ async def list_expenses(
         min_value=min_value,
         max_value=max_value,
     )
+
+
+@router.get("/metrics", response_model=MetricsOverview)
+async def metrics(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = ExpenseMetricGenerator(db, current_user.uid)
+
+    return await service.run()
 
 
 @router.get("/{expense_id}", response_model=ExpenseSchema)
