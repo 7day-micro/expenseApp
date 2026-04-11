@@ -1,18 +1,17 @@
-from typing import List, Optional
 from uuid import UUID
 
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+
+from src.common import BaseService
 from src.domain.budget.schemas import (
     BudgetCreateSchema,
     BudgetSchema,
     BudgetUpdateSchema,
 )
-from src.exceptions import EntityNotFoundException, DatabaseException
-from src.models import Budget
-from src.common import BaseService
 from src.domain.category.service import CategoryService
-
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from src.exceptions import DatabaseException, EntityNotFoundException
+from src.models import Budget
 
 
 class BudgetService(
@@ -33,6 +32,8 @@ class BudgetService(
             category_service = CategoryService(self.db)
             await category_service.get_by_id(data.category_id, user_id)
 
+        data.month_year = data.month_year.replace(day=1)
+
         new_budget = Budget(**data.model_dump(), user_id=user_id)
 
         try:
@@ -51,7 +52,7 @@ class BudgetService(
     # TODO : -> Make base service accept update schemas
     async def update(
         self, object_id: int, data: BudgetUpdateSchema, user_id: UUID
-    ) -> Optional[Budget]:
+    ) -> Budget | None:
         """
         Update the specified Budget with values provided in the update schema.
 
@@ -77,6 +78,8 @@ class BudgetService(
         ).items():
             setattr(budget, key, value)
 
+        budget.month_year = budget.month_year.replace(day=1)
+
         try:
             await self.db.commit()
             await self.db.refresh(budget)
@@ -93,7 +96,7 @@ class BudgetService(
             )
         return budget
 
-    async def delete(self, object_id: int, user_id: UUID) -> Optional[Budget]:
+    async def delete(self, object_id: int, user_id: UUID) -> Budget | None:
         """
         Delete a Budget belonging to the specified user.
 
@@ -125,7 +128,7 @@ class BudgetService(
             )
         return result
 
-    async def get_by_id(self, object_id: int, user_id: UUID) -> Optional[Budget]:
+    async def get_by_id(self, object_id: int, user_id: UUID) -> Budget | None:
         """
         Retrieve a Budget by its id scoped to a specific user.
 
@@ -147,7 +150,7 @@ class BudgetService(
 
         return result
 
-    async def get_all(self, user_id: UUID) -> List[Budget]:
+    async def get_all(self, user_id: UUID) -> list[Budget]:
         """
         Retrieve all Budget records belonging to the specified user.
 

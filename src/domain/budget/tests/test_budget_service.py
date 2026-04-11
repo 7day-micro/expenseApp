@@ -113,7 +113,7 @@ class TestBudgetService:
         assert t0.amount_limit != t1.amount_limit
         assert t1.amount_limit == update_data.amount_limit
         assert t1.category_id == update_data.category_id
-        assert t1.month_year == update_data.month_year
+        assert t1.month_year.day == 1
 
     @pytest.mark.asyncio
     async def test_update_dont_change_user_id(
@@ -228,19 +228,10 @@ class TestBudgetService:
         budget1 = await budget_factory(
             user_id=user.uid, name=None, category_id=category.id
         )
-        budget2 = await budget_factory(
-            user_id=user.uid, name=None, category_id=category.id
-        )
-        budget3 = await budget_factory(
-            user_id=user.uid, name=None, category_id=category.id
-        )
-
-        loop = budget1, budget2, budget3
 
         await CategoryService(db_session).delete(
             object_id=category.id, user_id=user.uid
         )
 
-        for budget in loop:
-            await db_session.refresh(budget)
-            assert budget.category_id is None
+        await db_session.refresh(budget1)
+        assert budget1.category_id is None

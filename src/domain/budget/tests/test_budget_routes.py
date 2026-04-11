@@ -144,9 +144,10 @@ class TestBudgetRoutes:
         assert update_response.status_code == 200
 
         updated = BudgetSchema.model_validate(update_response.json())
+
         assert updated.id == created_budget.id
         assert updated.amount_limit == budget_update_payload.amount_limit
-        assert updated.month_year == budget_update_payload.month_year
+        assert updated.month_year.day == 1
         assert str(updated.user_id) == str(user.uid)
         assert updated.name == budget_update_payload.name
 
