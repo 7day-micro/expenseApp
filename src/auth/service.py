@@ -1,4 +1,4 @@
-from fastapi import HTTPException, logger, status
+from fastapi import HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -44,7 +44,6 @@ async def login_user_service(user_credentials: LoginSchema, db: AsyncSession):
     if not user or not oauth2.verify_password(
         user_credentials.password, user.password_hash
     ):
-        logger.warning(f"Failed login attempt for email: {user_credentials.email}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials"
         )
