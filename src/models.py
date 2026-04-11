@@ -61,7 +61,10 @@ class User(Base):
 class Category(Base):
     __tablename__ = "categories"
 
-    __table_args__ = (Index("idx_categories_user_id", "user_id"),)
+    __table_args__ = (
+        Index("idx_categories_user_id", "user_id"),
+        UniqueConstraint("user_id", "name", name="uq_categories_name_user"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
