@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+
 from src.config import settings
 
 SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.DATABASE_USERNAME}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOSTNAME}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}"
@@ -12,7 +13,7 @@ def engine_factory(*args, **kwargs):
 engine = engine_factory(
     SQLALCHEMY_DATABASE_URL,
     echo=False,
-    pool_size=10,
+    pool_size=30,
     max_overflow=5,
     pool_timeout=30,
     pool_recycle=1800,
