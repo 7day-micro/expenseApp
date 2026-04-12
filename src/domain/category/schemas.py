@@ -1,27 +1,25 @@
+from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
+from pydantic import BaseModel, ConfigDict
 
 
 class CategorySchema(BaseModel):
     id: int
     user_id: UUID
     name: str
-    color_icon: Optional[str]
+    color_icon: str | None
     created_at: datetime
     updated_at: datetime
 
-    class Meta:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CategoryCreateSchema(BaseModel):
     name: str
-    color_icon: Optional[str]
+    color_icon: str | None
 
 
 class CategoryUpdateSchema(BaseModel):
-    name: Optional[str] = None
-    color_icon: Optional[str] = None
+    name: str | None = None
+    color_icon: str | None = None

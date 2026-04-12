@@ -93,8 +93,6 @@ BUDGETS_NAMES = [
 # -----------------------------------------------------------------------------
 # Factories
 # -----------------------------------------------------------------------------
-# NOTE: Removed `sqlalchemy_get_or_create` since it invokes synchronous queries
-# unsupported by AsyncSession.
 
 
 class UserFactory(factory.alchemy.SQLAlchemyModelFactory):

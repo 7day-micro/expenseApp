@@ -42,12 +42,32 @@ class ExpenseUpdateSchema(BaseModel):
 
 
 class PeriodMetrics(BaseModel):
+    """
+    This schema is for the scerios where we want to present some data about a
+    certain period of time, i.e a week, a month, whatever.
+
+    The intention is to given metrics about this period of time, such as:
+
+    average_daily = The average spenting per day
+    total = the total transactioned between the given range of time
+    daily = a list of dict where the date is the key and has the amount of the total transactioned in that day
+    """
+
     average_daily: Decimal
     total: Decimal
     daily: dict[date, Decimal]
+    category_metrics: list[CategoryMetricSchema] | None = []
 
 
 class VariationMetrics(BaseModel):
+    """
+    This schema is for deliver data about variation between to period of time
+
+    for example, the last week vs, this current week
+
+    In nutshell how many % of variation from the last period to this current period
+    """
+
     from_last_week_total: Decimal
     from_last_week_daily: Decimal
     from_last_month_total: Decimal
@@ -63,10 +83,6 @@ class MetricsOverview(BaseModel):
 
     variation: VariationMetrics
 
-    # COMPARACION
-    # last_month_vs_current_month_average_daily_spent: Decimal | None
-    # last_week_vs_current_week_average_daily_spent: Decimal | None
-
 
 class BudgetMetricSchema(BaseModel):
     budget: BudgetSchema
@@ -78,4 +94,4 @@ class BudgetMetricSchema(BaseModel):
 class CategoryMetricSchema(BaseModel):
     category: CategorySchema
     percentage_of_total: Decimal
-    total_spent: Decimal
+    total: Decimal
