@@ -45,7 +45,7 @@ class TestExpenseService:
     ):
         service = ExpenseService(db_session)
         result = await service.get_all(uuid4())
-        assert result == []
+        assert result.data == []
 
     @pytest.mark.asyncio
     async def test_get_by_id_raises_for_nonexistent_expense_id(self, db_session):
@@ -86,7 +86,7 @@ class TestExpenseService:
 
         expenses = await service.get_all(user.uid)
 
-        assert len(expenses) == 5
+        assert len(expenses.data) == 5
 
     @pytest.mark.asyncio
     async def test_update_expense(
@@ -147,8 +147,8 @@ class TestExpenseService:
             note="Updated Note",
         )
 
-        assert await service.get_all(user.uid) is not None
-        assert len(await service.get_all(user.uid)) == 1
+        assert (await service.get_all(user.uid)).data is not None
+        assert len((await service.get_all(user.uid)).data) == 1
 
         updated = await service.update(
             object_id=expense.id, data=payload, user_id=user.uid

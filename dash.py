@@ -1,6 +1,7 @@
 import asyncio
 import calendar
 import datetime
+import json
 from decimal import Decimal
 from typing import TypedDict
 from uuid import UUID
@@ -205,14 +206,27 @@ class ExpenseMetricGenerator:
 
         rows = result.all()
 
-        return [
+        data = [
             {
-                "category": CategorySchema.model_validate(row.Category),
-                "percentage_of_total": 2,
-                "total": row.total,
+                "category": CategorySchema.model_validate(row.Category).model_dump(
+                    mode="json"
+                ),
+                "percentage_of_total": float(
+                    ExpenseMetricGenerator.get_percentage_of_total(
+                        row.grand_total, row.total
+                    )
+                ),
+                "total": float(row.total),
             }
             for row in rows
         ]
+
+        with open("log.json", "w") as f:
+            f.write(json.dumps(data, indent=4))
+
+    @staticmethod
+    def get_percentage_of_total(total: Decimal, part: Decimal):
+        return Decimal((part / max(1, total)) * 100).quantize(Decimal("0.00"))
 
     @staticmethod
     def get_past_vs_current(before: Decimal, current: Decimal):
@@ -249,12 +263,6 @@ async def run():
             current_month.get("total"),
         )
 
-        from pprint import pprint
-
-        pprint(
-            last_month.get("days"),
-        )
-
         current_month_metric = PeriodMetrics(
             total=current_month.get("total"),
             daily=current_month.get("days"),
@@ -286,16 +294,13 @@ async def run():
             from_last_month_total=from_last_month_total,
         )
 
-        Overview = MetricsOverview(
+        return MetricsOverview(
             current_month=current_month_metric,
             last_month=last_month_metric,
             current_week=current_week_metric,
             last_week=last_week_metric,
             variation=variations,
         ).model_dump_json()
-
-        with open("log.json", "w") as f:
-            f.write(Overview)
 
 
 async def run_categories_extractor():

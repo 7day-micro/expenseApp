@@ -1,4 +1,3 @@
-import asyncio
 import calendar
 import datetime
 from decimal import Decimal
@@ -16,6 +15,7 @@ from src.domain.expense.schemas import (
     ExpenseSchema,
     ExpenseUpdateSchema,
     MetricsOverview,
+    PaginatedResponseSchema,
     PeriodMetrics,
     VariationMetrics,
 )
@@ -123,15 +123,19 @@ class ExpenseService(
     async def get_all(
         self,
         user_id: UUID,
-        skip: int = 0,
-        limit: int | None = None,
+        page: int = 1,
+        limit: int = 20,
         date_filter: datetime.date | None = None,
         start_date: datetime.date | None = None,
         end_date: datetime.date | None = None,
         min_value: Decimal | None = None,
         max_value: Decimal | None = None,
-    ) -> list[Expense]:
-        statement = select(Expense).where(Expense.user_id == user_id)
+    ) -> PaginatedResponseSchema:
+        if limit < 1:
+            raise
+        statement = select(Expense).where(
+            Expense.user_id == user_id
+        )  # statement for extraction
 
         if date_filter is not None:
             statement = statement.where(
@@ -152,14 +156,21 @@ class ExpenseService(
         if max_value is not None:
             statement = statement.where(Expense.amount <= max(0, max_value))
 
+        """ count_statement = select(func.count()).select_from(statement.subquery()) """
+        """ total_count = await self.db.execute(count_statement).scalar() or 0 """
+
+        max_limit = 50
+
+        safe_page = max(1, page)  # Sanitize for positive value
+        safe_limit = min(limit, max_limit)  # ensure limit is positive and at most 50.
+
         statement = statement.order_by(
             Expense.transaction_date.desc(), Expense.id.desc()
         )
 
-        if skip:
-            statement = statement.offset(skip)
-        if limit is not None:
-            statement = statement.limit(limit)
+        statement = statement.offset((safe_page - 1) * safe_limit).limit(
+            safe_limit
+        )  # Subtracting 1 as default page is 1 which is first page with no offset
 
         result = await self.db.execute(statement)
         return list(result.scalars().all())
@@ -221,6 +232,7 @@ class ExpenseMetricGenerator:
 
     async def get_current_month_daily_spent(self) -> MetricSchema:
         today = datetime.datetime.now(tz=datetime.UTC).date()
+        tomorrow = today + datetime.timedelta(days=1)
 
         current_month_first_day = today.replace(day=1)
 
@@ -233,7 +245,7 @@ class ExpenseMetricGenerator:
             .where(
                 Expense.user_id == self.uid,
                 Expense.transaction_date >= current_month_first_day,
-                Expense.transaction_date < today,
+                Expense.transaction_date < tomorrow,
             )
             .group_by(func.date(Expense.transaction_date))
             .order_by(func.date(Expense.transaction_date))
@@ -292,6 +304,8 @@ class ExpenseMetricGenerator:
 
     async def get_current_week_daily_spent(self) -> MetricSchema:
         today = datetime.datetime.now(tz=datetime.UTC).date()
+        tomorrow = today + datetime.timedelta(days=1)
+
         today_weekday = today.isoweekday()
 
         current_week_first_day = today - datetime.timedelta(days=today_weekday - 1)
@@ -305,7 +319,7 @@ class ExpenseMetricGenerator:
             .where(
                 Expense.user_id == self.uid,
                 Expense.transaction_date >= current_week_first_day,
-                Expense.transaction_date < today,
+                Expense.transaction_date < tomorrow,
             )
             .group_by(func.date(Expense.transaction_date))
             .order_by(func.date(Expense.transaction_date))
@@ -325,12 +339,10 @@ class ExpenseMetricGenerator:
         }
 
     async def run(self):
-        last_month, last_week, current_month, current_week = await asyncio.gather(
-            self.get_last_month_daily_spent(),
-            self.get_last_week_daily_spent(),
-            self.get_current_month_daily_spent(),
-            self.get_current_week_daily_spent(),
-        )
+        last_month = await self.get_last_month_daily_spent()
+        last_week = await self.get_last_week_daily_spent()
+        current_month = await self.get_current_month_daily_spent()
+        current_week = await self.get_current_week_daily_spent()
         ## VS ============
         last_week_var_average = ExpenseMetricGenerator.get_past_vs_current(
             last_week.get("average_daily_spent"),

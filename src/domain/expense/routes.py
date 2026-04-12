@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.oauth2 import get_current_user
@@ -11,6 +11,7 @@ from src.domain.expense.schemas import (
     ExpenseSchema,
     ExpenseUpdateSchema,
     MetricsOverview,
+    PaginatedResponseSchema,
 )
 from src.domain.expense.service import ExpenseMetricGenerator, ExpenseService
 from src.models import User
@@ -28,7 +29,7 @@ async def create_expense(
     return await service.create(payload, current_user.uid)
 
 
-@router.get("/", response_model=list[ExpenseSchema])
+@router.get("/", response_model=PaginatedResponseSchema)
 async def list_expenses(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -37,6 +38,10 @@ async def list_expenses(
     end_date: date | None = None,
     min_value: Decimal | None = None,
     max_value: Decimal | None = None,
+    limit: int = Query(
+        20, ge=1
+    ),  # default is 20 and query param should be > =1 or error raised
+    page: int = 1,
 ):
     service = ExpenseService(db)
     return await service.get_all(
@@ -46,6 +51,8 @@ async def list_expenses(
         end_date=end_date,
         min_value=min_value,
         max_value=max_value,
+        limit=limit,
+        page=page,
     )
 
 

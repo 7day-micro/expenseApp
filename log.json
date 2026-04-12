@@ -1,0 +1,86 @@
+[
+    {
+        "category": {
+            "id": 526,
+            "user_id": "a50ed0e8-5f81-47f5-8c30-de68fac05c95",
+            "name": "netflix",
+            "color_icon": "DarkBlue",
+            "created_at": "2026-04-11T04:37:01.064776Z",
+            "updated_at": "2026-04-11T04:37:01.064776Z"
+        },
+        "percentage_of_total": 16.77,
+        "total": 5860.64
+    },
+    {
+        "category": {
+            "id": 524,
+            "user_id": "a50ed0e8-5f81-47f5-8c30-de68fac05c95",
+            "name": "utilities",
+            "color_icon": "PaleTurquoise",
+            "created_at": "2026-04-11T04:37:01.064776Z",
+            "updated_at": "2026-04-11T04:37:01.064776Z"
+        },
+        "percentage_of_total": 10.32,
+        "total": 3606.28
+    },
+    {
+        "category": {
+            "id": 520,
+            "user_id": "a50ed0e8-5f81-47f5-8c30-de68fac05c95",
+            "name": "rent",
+            "color_icon": "PaleTurquoise",
+            "created_at": "2026-04-11T04:37:01.064776Z",
+            "updated_at": "2026-04-11T04:37:01.064776Z"
+        },
+        "percentage_of_total": 13.81,
+        "total": 4826.15
+    },
+    {
+        "category": {
+            "id": 521,
+            "user_id": "a50ed0e8-5f81-47f5-8c30-de68fac05c95",
+            "name": "sports",
+            "color_icon": "Gray",
+            "created_at": "2026-04-11T04:37:01.064776Z",
+            "updated_at": "2026-04-11T04:37:01.064776Z"
+        },
+        "percentage_of_total": 17.03,
+        "total": 5951.81
+    },
+    {
+        "category": {
+            "id": 522,
+            "user_id": "a50ed0e8-5f81-47f5-8c30-de68fac05c95",
+            "name": "travel",
+            "color_icon": "SaddleBrown",
+            "created_at": "2026-04-11T04:37:01.064776Z",
+            "updated_at": "2026-04-11T04:37:01.064776Z"
+        },
+        "percentage_of_total": 15.07,
+        "total": 5266.76
+    },
+    {
+        "category": {
+            "id": 525,
+            "user_id": "a50ed0e8-5f81-47f5-8c30-de68fac05c95",
+            "name": "groceries",
+            "color_icon": "SteelBlue",
+            "created_at": "2026-04-11T04:37:01.064776Z",
+            "updated_at": "2026-04-11T04:37:01.064776Z"
+        },
+        "percentage_of_total": 13.07,
+        "total": 4568.1
+    },
+    {
+        "category": {
+            "id": 523,
+            "user_id": "a50ed0e8-5f81-47f5-8c30-de68fac05c95",
+            "name": "school",
+            "color_icon": "Thistle",
+            "created_at": "2026-04-11T04:37:01.064776Z",
+            "updated_at": "2026-04-11T04:37:01.064776Z"
+        },
+        "percentage_of_total": 13.61,
+        "total": 4756.47
+    }
+]
