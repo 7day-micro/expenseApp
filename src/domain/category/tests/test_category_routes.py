@@ -5,7 +5,6 @@ import pytest_asyncio
 
 from src.domain.category.schemas import CategorySchema, CategoryUpdateSchema
 
-
 CATEGORY_BASE_PATH = "/categories"
 
 
@@ -89,7 +88,9 @@ class TestCategoryRoutes:
     ):
         for _ in range(20):
             await category_factory(user_id=user.uid)
-            await category_factory(user_id=second_user.uid)
+            await category_factory(
+                user_id=second_user.uid,
+            )
 
         response = await authenticated_client.get(f"{CATEGORY_BASE_PATH}/")
 
