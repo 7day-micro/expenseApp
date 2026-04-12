@@ -61,7 +61,7 @@ class PeriodMetrics(BaseModel):
 
     average_daily: Decimal
     total: Decimal
-    daily: dict[date, Any]
+    daily: dict[date, DailyMetrics]
     category_metrics: list[CategoryMetricSchema] | None = []
 
 

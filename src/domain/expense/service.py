@@ -265,9 +265,9 @@ class ExpenseMetricGenerator:
         rows = result.all()
         grand_total = rows[0].grand_total if rows else Decimal(0)
         days = {row.day: DailyMetrics(total=row.total, count=row.count) for row in rows}
-        average_daily_spending = (
+        average_daily_spending = Decimal(
             grand_total / datetime.datetime.now(tz=datetime.UTC).date().isoweekday()
-        )
+        ).quantize(Decimal("0.00"))
 
         category_metrics = await self.get_category_metrics(
             time_range_stmt=self.current_month_range_statement
