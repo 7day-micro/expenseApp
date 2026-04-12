@@ -128,6 +128,8 @@ class ExpenseService(
         min_value: Decimal | None = None,
         max_value: Decimal | None = None,
     ) -> PaginatedResponseSchema:
+        if limit < 1:
+            raise 
         statement = select(Expense).where(Expense.user_id == user_id) #statement for extraction
         
         if date_filter is not None:
@@ -155,19 +157,17 @@ class ExpenseService(
         max_limit = 50
 
         safe_page = max(1, page) #Sanitize for positive value
-        safe_limit = min(limit, max_limit) #ensure max limit on page size
+        safe_limit = min(limit, max_limit) #ensure limit is positive and at most 50. 
 
-        statement = statement.offset((safe_page - 1)* limit).limit(safe_limit) #Subtracting 1 as default page is 1 which is first page with no offset      
-        
         statement = statement.order_by(
             Expense.transaction_date.desc(), Expense.id.desc()
         )
+
+        statement = statement.offset((safe_page - 1)* safe_limit).limit(safe_limit) #Subtracting 1 as default page is 1 which is first page with no offset      
 
         result = await self.db.execute(statement)
         result_list =  list(result.scalars().all())
 
         meta = MetaSchema(total = total_count, count = len(result_list), page = safe_page, total_pages=ceil(total_count/safe_limit))
         return PaginatedResponseSchema(data=result_list, meta = meta)
-        
-        
         
