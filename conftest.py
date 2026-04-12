@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 import pytest_asyncio
-from faker import Faker
+from faker import Faker as Fk
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,8 @@ from src.main import app
 from src.models import Budget, Category, Expense, User
 
 A_VALID_PASSWORD = "StrongePassWord123#"
+
+fake = Fk()
 
 
 @pytest_asyncio.fixture
@@ -102,11 +104,9 @@ async def second_user(db_session, valid_user):
     """
     from src.auth.oauth2 import get_password_hash
 
-    fake = Faker()
-
     user = User(
         username=fake.user_name(),
-        email=fake.email(),
+        email=fake.unique.email(),
         password_hash=get_password_hash(valid_user.password),
     )
 
@@ -131,8 +131,6 @@ async def user_factory(db_session):
     """
     from src.auth.oauth2 import get_password_hash
 
-    fake = Faker()
-
     async def _factory(username=None, email=None, password=A_VALID_PASSWORD):
         """
         Create and persist a User with optional username, email, and password, and return the created instance.
@@ -147,7 +145,7 @@ async def user_factory(db_session):
         """
         user = User(
             username=username or fake.user_name(),
-            email=email or fake.email(),
+            email=email or fake.unique.email(),
             password_hash=get_password_hash(password),
         )
         db_session.add(user)
@@ -231,11 +229,10 @@ async def category_factory(db_session):
     name : optional, default to a fake word
     color_icon : optional, default to a fake color name
     """
-    fake = Faker()
 
     async def _factory(name=None, color_icon=None, user_id=None):
         category = Category(
-            name=name or fake.word(),
+            name=name or fake.unique.word(),
             color_icon=color_icon or fake.color_name(),
             user_id=user_id,
         )
@@ -275,7 +272,6 @@ async def expense_factory(db_session):
         transaction_date : optional, default to current UTC datetime
         note : optional, default to a fake sentence
     """
-    fake = Faker()
 
     async def _factory(
         user_id=None, category_id=None, amount=None, transaction_date=None, note=None
@@ -349,7 +345,6 @@ async def budget_factory(db_session):
         month_year : optional, default to current UTC datetime
         note : optional, default to a fake sentence
     """
-    fake = Faker()
 
     async def _factory(
         user_id=None,
@@ -360,7 +355,7 @@ async def budget_factory(db_session):
     ):
         budget = Budget(
             user_id=user_id,
-            name=name or fake.name(),
+            name=name or fake.unique.name(),
             category_id=category_id,
             amount_limit=amount_limit
             or Decimal(fake.pydecimal(left_digits=3, right_digits=2, positive=True)),

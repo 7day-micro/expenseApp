@@ -1,11 +1,12 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
 
 class CategorySchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     user_id: UUID
     name: str
@@ -13,8 +14,6 @@ class CategorySchema(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Meta:
-        from_attributes = True
 
 
 class CategoryCreateSchema(BaseModel):

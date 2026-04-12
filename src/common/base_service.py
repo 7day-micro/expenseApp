@@ -7,9 +7,10 @@ Model = TypeVar("Model")  # Model
 ResponseSchema = TypeVar("Response")  # Schema
 CreateSchema = TypeVar("Create")  # Schema
 UpdateSchema = TypeVar("Update")  # Schema
+PaginatedSchema = TypeVar("Paginated-Response", default=Any)
 
 
-class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema]):
+class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema, PaginatedSchema]):
     """
     Base service class that defines the common CRUD operations for all services.
 
@@ -101,7 +102,7 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
         pass
 
     @abstractmethod
-    async def get_all(self, user_id: UUID) -> List[Model]:
+    async def get_all(self, user_id: UUID) -> list[Model]|PaginatedSchema:
         """
         user_id : The ID of the user performing the operation, used for associating the records
 
