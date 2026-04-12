@@ -30,7 +30,23 @@ class ExpenseCreateSchema(BaseModel):
 
 
 class ExpenseUpdateSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     category_id: Optional[int] = None
     amount: Optional[Decimal] = None
     transaction_date: Optional[datetime] = None
     note: Optional[str] = None
+
+class MetaSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    total: int
+    count: int
+    page: int
+    total_pages: int
+
+class PaginatedResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    data: list[ExpenseSchema]
+    meta: MetaSchema

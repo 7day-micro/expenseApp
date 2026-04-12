@@ -10,6 +10,7 @@ from src.domain.expense.schemas import (
     ExpenseCreateSchema,
     ExpenseSchema,
     ExpenseUpdateSchema,
+    PaginatedResponseSchema,
 )
 from src.domain.expense.service import ExpenseService
 from src.models import User
@@ -27,7 +28,7 @@ async def create_expense(
     return await service.create(payload, current_user.uid)
 
 
-@router.get("/", response_model=list[ExpenseSchema])
+@router.get("/", response_model=PaginatedResponseSchema)
 async def list_expenses(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
