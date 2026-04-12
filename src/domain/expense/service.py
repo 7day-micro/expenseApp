@@ -1,25 +1,29 @@
 import calendar
 import datetime
 from decimal import Decimal
-from typing import Any, TypedDict
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.base_service import BaseService
+from src.db import SessionLocal
+from src.domain.category.schemas import CategorySchema
 from src.domain.category.service import CategoryService
+from src.domain.expense.schemas import CategoryMetricSchema
+from src.domain.expense.schemas import DailyMetrics
 from src.domain.expense.schemas import (
     ExpenseCreateSchema,
     ExpenseSchema,
     ExpenseUpdateSchema,
-    MetricsOverview,
     PaginatedResponseSchema,
     PeriodMetrics,
-    VariationMetrics,
 )
+from src.domain.expense.schemas import VariationMetrics, MetricsOverview
 from src.exceptions import DatabaseException, EntityNotFoundException
+from src.models import Category
 from src.models import Expense
 
 
@@ -176,19 +180,13 @@ class ExpenseService(
         return list(result.scalars().all())
 
 
-class MetricSchema(TypedDict):
-    days: dict[datetime.date, int]
-    total: Decimal
-    average_daily_spent: Decimal
-
-
 class ExpenseMetricGenerator:
     def __init__(self, db: AsyncSession, user_id: UUID):
         self.db = db
         self.uid = user_id
 
-    async def get_last_month_daily_spent(self) -> MetricSchema:
-
+    @property
+    def last_month_range_statement(self):
         today = datetime.datetime.now(tz=datetime.UTC).date()
 
         current_month_first_day = today.replace(day=1)
@@ -198,111 +196,38 @@ class ExpenseMetricGenerator:
         month_days_count = calendar.monthrange(
             passed_month_first_day.year, month=passed_month_first_day.month
         )[1]
-
-        statement = (
-            select(
-                func.sum(Expense.amount).label("total"),
-                func.sum(func.sum(Expense.amount)).over().label("grand_total"),
-                func.date(Expense.transaction_date).label("day"),
-            )
-            .where(
-                Expense.user_id == self.uid,
-                Expense.transaction_date >= passed_month_first_day,
-                Expense.transaction_date < current_month_first_day,
-            )
-            .group_by(func.date(Expense.transaction_date))
-            .order_by(func.date(Expense.transaction_date))
+        return and_(
+            Expense.transaction_date >= passed_month_first_day,
+            Expense.transaction_date < current_month_first_day,
         )
 
-        result = await self.db.execute(statement=statement)
-
-        rows = result.all()
-
-        grand_total = sum(row.total for row in rows)
-
-        average_per_day = grand_total / month_days_count
-
-        daily = {row.day: row.total for row in rows}
-
-        return {
-            "days": daily,
-            "total": grand_total,
-            "average_daily_spent": average_per_day,
-        }
-
-    async def get_current_month_daily_spent(self) -> MetricSchema:
+    @property
+    def current_month_range_statement(self):
         today = datetime.datetime.now(tz=datetime.UTC).date()
         tomorrow = today + datetime.timedelta(days=1)
 
         current_month_first_day = today.replace(day=1)
 
-        statement = (
-            select(
-                func.sum(Expense.amount).label("total"),
-                func.sum(func.sum(Expense.amount)).over().label("grand_total"),
-                func.date(Expense.transaction_date).label("day"),
-            )
-            .where(
-                Expense.user_id == self.uid,
-                Expense.transaction_date >= current_month_first_day,
-                Expense.transaction_date < tomorrow,
-            )
-            .group_by(func.date(Expense.transaction_date))
-            .order_by(func.date(Expense.transaction_date))
+        return and_(
+            Expense.transaction_date >= current_month_first_day,
+            Expense.transaction_date < tomorrow,
         )
 
-        res = await self.db.execute(statement=statement)
-
-        rows = res.all()
-
-        grand_total = sum(row.total for row in rows)
-
-        average_daily_spenting = grand_total / today.day
-
-        daily = {row.day: row.total for row in rows}
-
-        return {
-            "days": daily,
-            "total": grand_total,
-            "average_daily_spent": average_daily_spenting,
-        }
-
-    async def get_last_week_daily_spent(self) -> MetricSchema:
+    @property
+    def last_week_range_statement(self):
         today = datetime.datetime.now(tz=datetime.UTC).date()
         today_weekday = today.isoweekday()
 
         current_week_first_day = today - datetime.timedelta(days=today_weekday - 1)
         passed_week_first_day = current_week_first_day - datetime.timedelta(days=7)
 
-        statement = (
-            select(
-                func.sum(Expense.amount).label("total"),
-                func.sum(func.sum(Expense.amount)).over().label("grand_total"),
-                func.date(Expense.transaction_date).label("day"),
-            )
-            .where(
-                Expense.user_id == self.uid,
-                Expense.transaction_date >= passed_week_first_day,
-                Expense.transaction_date < current_week_first_day,
-            )
-            .group_by(func.date(Expense.transaction_date))
-            .order_by(func.date(Expense.transaction_date))
+        return and_(
+            Expense.transaction_date >= passed_week_first_day,
+            Expense.transaction_date < current_week_first_day,
         )
 
-        result = await self.db.execute(statement=statement)
-
-        rows = result.all()
-        grand_total = sum(row.total for row in rows)
-        daily = {row.day: row.total for row in rows}
-        average_daily_spenting = grand_total / 7
-
-        return {
-            "days": daily,
-            "total": grand_total,
-            "average_daily_spent": average_daily_spenting,
-        }
-
-    async def get_current_week_daily_spent(self) -> MetricSchema:
+    @property
+    def current_week_range_statement(self):
         today = datetime.datetime.now(tz=datetime.UTC).date()
         tomorrow = today + datetime.timedelta(days=1)
 
@@ -310,90 +235,136 @@ class ExpenseMetricGenerator:
 
         current_week_first_day = today - datetime.timedelta(days=today_weekday - 1)
 
-        statement = (
+        return and_(
+            Expense.transaction_date >= current_week_first_day,
+            Expense.transaction_date < tomorrow,
+        )
+
+    def get_statement(self, range_statement):
+        return (
             select(
                 func.sum(Expense.amount).label("total"),
+                func.count("*").label("count"),
                 func.sum(func.sum(Expense.amount)).over().label("grand_total"),
                 func.date(Expense.transaction_date).label("day"),
             )
-            .where(
-                Expense.user_id == self.uid,
-                Expense.transaction_date >= current_week_first_day,
-                Expense.transaction_date < tomorrow,
-            )
+            .where(Expense.user_id == self.uid, range_statement)
             .group_by(func.date(Expense.transaction_date))
             .order_by(func.date(Expense.transaction_date))
         )
 
-        result = await self.db.execute(statement=statement)
+    @staticmethod
+    def get_percentage_of_total(total: Decimal, part: Decimal):
+        return Decimal((part / max(1, total)) * 100).quantize(Decimal("0.00"))
+
+    async def get_period_metrics(self, time_range_stmt):
+        stmt = self.get_statement(time_range_stmt)
+
+        result = await self.db.execute(statement=stmt)
 
         rows = result.all()
-        grand_total = sum(row.total for row in rows)
-        daily = {row.day: row.total for row in rows}
-        average_daily_spenting = grand_total / today_weekday
+        grand_total = rows[0].grand_total if rows else Decimal(0)
+        days = {row.day: DailyMetrics(total=row.total, count=row.count) for row in rows}
+        average_daily_spending = (
+            grand_total / datetime.datetime.now(tz=datetime.UTC).date().isoweekday()
+        )
 
-        return {
-            "days": daily,
-            "total": grand_total,
-            "average_daily_spent": average_daily_spenting,
-        }
+        category_metrics = await self.get_category_metrics(
+            time_range_stmt=self.current_month_range_statement
+        )
 
-    async def run(self):
-        last_month = await self.get_last_month_daily_spent()
-        last_week = await self.get_last_week_daily_spent()
-        current_month = await self.get_current_month_daily_spent()
-        current_week = await self.get_current_week_daily_spent()
-        ## VS ============
-        last_week_var_average = ExpenseMetricGenerator.get_past_vs_current(
-            last_week.get("average_daily_spent"),
-            current_week.get("average_daily_spent"),
-        )
-        from_last_week_total = ExpenseMetricGenerator.get_past_vs_current(
-            last_week.get("total"),
-            current_week.get("total"),
-        )
-        from_last_month_daily = ExpenseMetricGenerator.get_past_vs_current(
-            last_month.get("average_daily_spent"),
-            current_month.get("average_daily_spent"),
-        )
-        from_last_month_total = ExpenseMetricGenerator.get_past_vs_current(
-            last_month.get("total"),
-            current_month.get("total"),
-        )
-        current_month_metric = PeriodMetrics(
-            total=current_month.get("total"),
-            daily=current_month.get("days"),
-            average_daily=current_month.get("average_daily_spent"),
-        )
-        last_month_metric = PeriodMetrics(
-            average_daily=last_month.get("average_daily_spent"),
-            daily=last_month.get("days"),
-            total=last_month.get("total"),
-        )
-        current_week_metric = PeriodMetrics(
-            total=current_week.get("total"),
-            daily=current_week.get("days"),
-            average_daily=current_week.get("average_daily_spent"),
-        )
-        last_week_metric = PeriodMetrics(
-            average_daily=last_week.get("average_daily_spent"),
-            daily=last_week.get("days"),
-            total=last_week.get("total"),
-        )
-        variations = VariationMetrics(
-            from_last_week_daily=last_week_var_average,
-            from_last_week_total=from_last_week_total,
-            from_last_month_daily=from_last_month_daily,
-            from_last_month_total=from_last_month_total,
-        )
-        return MetricsOverview(
-            current_month=current_month_metric,
-            last_month=last_month_metric,
-            current_week=current_week_metric,
-            last_week=last_week_metric,
-            variation=variations,
+        return PeriodMetrics(
+            daily=days,
+            total=grand_total,
+            average_daily=average_daily_spending,
+            category_metrics=category_metrics,
         )
 
     @staticmethod
     def get_past_vs_current(before: Decimal, current: Decimal):
         return ((current - before) / (before if before != 0 else 1)) * 100
+
+    async def get_category_metrics(self, time_range_stmt) -> list[CategoryMetricSchema]:
+        grand_total_st = (
+            select(func.sum(Expense.amount))
+            .where(time_range_stmt, Expense.user_id == self.uid)
+            .scalar_subquery()
+        )
+
+        statement = (
+            select(
+                Category.name.label("cat_name"),
+                func.sum(Expense.amount).label("total"),
+                grand_total_st.label("grand_total"),
+                Category,
+            )
+            .join(Category, Expense.category_id == Category.id)
+            .where(
+                Expense.user_id == self.uid,
+                Expense.category_id.isnot(None),
+                time_range_stmt,
+            )
+            .group_by(Category.id)
+        )
+
+        result = await self.db.execute(statement=statement)
+
+        rows = result.all()
+
+        return [
+            CategoryMetricSchema(
+                total=row.total,
+                category=CategorySchema.model_validate(row.Category),
+                percentage_of_total=ExpenseMetricGenerator.get_percentage_of_total(
+                    row.grand_total, row.total
+                ),
+            )
+            for row in rows
+        ]
+
+    async def run(self):
+        async with SessionLocal.begin() as session:
+            last_month = await self.get_period_metrics(self.last_month_range_statement)
+            last_week = await self.get_period_metrics(self.last_week_range_statement)
+            current_month = await self.get_period_metrics(
+                self.current_month_range_statement
+            )
+            current_week = await self.get_period_metrics(
+                self.current_week_range_statement
+            )
+
+            ## VS ============
+
+            last_week_var_average = ExpenseMetricGenerator.get_past_vs_current(
+                last_week.average_daily,
+                current_week.average_daily,
+            )
+
+            from_last_week_total = ExpenseMetricGenerator.get_past_vs_current(
+                last_week.total,
+                current_week.total,
+            )
+
+            from_last_month_daily = ExpenseMetricGenerator.get_past_vs_current(
+                last_month.average_daily,
+                current_month.average_daily,
+            )
+            from_last_month_total = ExpenseMetricGenerator.get_past_vs_current(
+                last_month.total,
+                current_month.total,
+            )
+
+            variations = VariationMetrics(
+                from_last_week_daily=last_week_var_average,
+                from_last_week_total=from_last_week_total,
+                from_last_month_daily=from_last_month_daily,
+                from_last_month_total=from_last_month_total,
+            )
+
+            return MetricsOverview(
+                current_month=current_month,
+                last_month=last_month,
+                current_week=current_month,
+                last_week=last_week,
+                variation=variations,
+            )

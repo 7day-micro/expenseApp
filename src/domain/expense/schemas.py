@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -41,6 +42,11 @@ class ExpenseUpdateSchema(BaseModel):
 # #====================================================================
 
 
+class DailyMetrics(BaseModel):
+    total: Decimal
+    count: int
+
+
 class PeriodMetrics(BaseModel):
     """
     This schema is for the scerios where we want to present some data about a
@@ -55,7 +61,7 @@ class PeriodMetrics(BaseModel):
 
     average_daily: Decimal
     total: Decimal
-    daily: dict[date, Decimal]
+    daily: dict[date, Any]
     category_metrics: list[CategoryMetricSchema] | None = []
 
 
@@ -95,12 +101,6 @@ class CategoryMetricSchema(BaseModel):
     category: CategorySchema
     percentage_of_total: Decimal
     total: Decimal
-    model_config = ConfigDict(from_attributes=True)
-
-    category_id: int | None = None
-    amount: Decimal | None = None
-    transaction_date: datetime | None = None
-    note: str | None = None
 
 
 class MetaSchema(BaseModel):
