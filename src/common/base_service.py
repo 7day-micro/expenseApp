@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, List, Optional, Any
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, Generic, TypeVar
 from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 Model = TypeVar("Model")  # Model
 ResponseSchema = TypeVar("Response")  # Schema
@@ -10,7 +11,9 @@ UpdateSchema = TypeVar("Update")  # Schema
 PaginatedSchema = TypeVar("Paginated-Response", default=Any)
 
 
-class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema, PaginatedSchema]):
+class BaseService(
+    ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema, PaginatedSchema]
+):
     """
     Base service class that defines the common CRUD operations for all services.
 
@@ -28,7 +31,7 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
 
     """
 
-    def __init__(self, db: "AsyncSession"):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     @abstractmethod
@@ -42,7 +45,6 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
             TODO : define custom exception
 
         """
-        pass
 
     @abstractmethod
     async def update(
@@ -50,7 +52,7 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
         object_id: Any,
         data: UpdateSchema,
         user_id: UUID,  # FIXED
-    ) -> Optional[Model]:
+    ) -> Model | None:
         """
         Update an existing record identified by `object_id` with `data` for the given `user_id`.
 
@@ -65,10 +67,9 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
         Raises:
             EntityNotFoundException: if the record does not exist.
         """
-        pass
 
     @abstractmethod
-    async def delete(self, object_id: Any, user_id: UUID) -> Optional[Model]:
+    async def delete(self, object_id: Any, user_id: UUID) -> Model | None:
         """
         Delete the record identified by `object_id` that is associated with `user_id`.
 
@@ -82,10 +83,9 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
         Raises:
             EntityNotFoundException: If the record does not exist.
         """
-        pass
 
     @abstractmethod
-    async def get_by_id(self, object_id: Any, user_id: UUID) -> Optional[Model]:
+    async def get_by_id(self, object_id: Any, user_id: UUID) -> Model | None:
         """
         Retrieve a single record by its identifier, restricted to the provided user.
 
@@ -99,10 +99,9 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
         Raises:
             EntityNotFoundException: if the record does not exist.
         """
-        pass
 
     @abstractmethod
-    async def get_all(self, user_id: UUID) -> list[Model]|PaginatedSchema:
+    async def get_all(self, user_id: UUID) -> list[Model] | PaginatedSchema:
         """
         user_id : The ID of the user performing the operation, used for associating the records
 
@@ -113,4 +112,3 @@ class BaseService(ABC, Generic[Model, CreateSchema, ResponseSchema, UpdateSchema
         the user_id to return only the relevant data for the user.
 
         """
-        pass

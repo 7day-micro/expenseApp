@@ -3,20 +3,22 @@ from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+from src.domain.category.schemas import CategorySchema
 
 
 class BudgetSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    name: str = Field (max_length=60)
+    name: str = Field(max_length=60)
     user_id: UUID
     amount_limit: Decimal
 
     created_at: datetime
     month_year: datetime
 
-    category_id: int | None
+    category_id: int | None = None
+    category : CategorySchema | None = None
 
 
 class BudgetCreateSchema(BaseModel):

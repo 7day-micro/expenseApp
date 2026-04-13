@@ -3,7 +3,10 @@ from decimal import Decimal
 
 import pytest
 
-from src.domain.expense.schemas import ExpenseSchema, ExpenseUpdateSchema, PaginatedResponseSchema
+from src.domain.expense.schemas import (
+    ExpenseSchema,
+    ExpenseUpdateSchema,
+)
 
 
 class TestExpenseRoutes:
@@ -85,10 +88,9 @@ class TestExpenseRoutes:
         print(response.json())
 
         assert response.status_code == 200
-        data = list(map(ExpenseSchema.model_validate, response.json()['data']))
-       
+        data = list(map(ExpenseSchema.model_validate, response.json()["data"]))
+
         assert len(data) == 3
-        
 
     @pytest.mark.asyncio
     async def test_list_unauthenticated(
@@ -119,9 +121,9 @@ class TestExpenseRoutes:
         response = await authenticated_client.get("/expenses/")
 
         assert response.status_code == 200
-        data = list(map(ExpenseSchema.model_validate, response.json()['data']))
+        data = list(map(ExpenseSchema.model_validate, response.json()["data"]))
         assert all(str(expense.user_id) == str(user.uid) for expense in data)
-        assert len(data) == 20 #Changed since page limit = 20 by default
+        assert len(data) == 20  # Changed since page limit = 20 by default
 
     @pytest.mark.asyncio
     async def test_get_expense_by_id_route(
@@ -440,7 +442,7 @@ class TestExpenseRoutes:
             "/expenses/?min_value=20&max_value=80"
         )
         assert resp_value.status_code == 200
-        data_value = resp_value.json()['data']
+        data_value = resp_value.json()["data"]
         assert len(data_value) == 1
         assert data_value[0]["amount"] == "50.00"
 
@@ -448,12 +450,12 @@ class TestExpenseRoutes:
             "/expenses/?start_date=2023-01-10&end_date=2023-01-20"
         )
         assert resp_range.status_code == 200
-        data_range = resp_range.json()['data']
+        data_range = resp_range.json()["data"]
         assert len(data_range) == 1
         assert data_range[0]["amount"] == "50.00"
 
         resp_exact = await authenticated_client.get("/expenses/?date=2023-01-31")
         assert resp_exact.status_code == 200
-        data_exact = resp_exact.json()['data']
+        data_exact = resp_exact.json()["data"]
         assert len(data_exact) == 1
         assert data_exact[0]["amount"] == "100.00"

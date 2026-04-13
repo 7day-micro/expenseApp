@@ -1,12 +1,12 @@
-from src.domain.expense.schemas import ExpenseUpdateSchema
+from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
 
+from src.domain.expense.schemas import ExpenseUpdateSchema
 from src.domain.expense.service import ExpenseService
 from src.exceptions import EntityNotFoundException
-from datetime import datetime
 
 
 class TestExpenseService:
@@ -171,6 +171,7 @@ class TestExpenseService:
         self, db_session, user, category_factory, expense_factory
     ):
         from sqlalchemy import select
+
         from src.models import Expense
 
         category = await category_factory(user_id=user.uid)
@@ -195,11 +196,14 @@ class TestExpenseService:
         self, db_session, user_factory, expense_factory
     ):
         from sqlalchemy import select
+
         from src.models import Expense
 
         test_user = await user_factory()
 
         expense = await expense_factory(user_id=test_user.uid, category_id=None)
+
+        await db_session.commit()
 
         await db_session.delete(test_user)
         await db_session.commit()

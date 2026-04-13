@@ -49,13 +49,19 @@ class User(Base):
     )
 
     # updated for ASYNC
+
+    # Removed lazy="selectin" that was causing extreme overhead when get a user with
+    # lot of expense
+    # Using passive delete to avoid sqlachemty set expenses.user_id to NULL before delete
     categories: Mapped[list[Category]] = relationship(
-        back_populates="user", lazy="selectin"
+        back_populates="user", passive_deletes=True
     )
     expenses: Mapped[list[Expense]] = relationship(
-        back_populates="user", lazy="selectin"
+        back_populates="user", passive_deletes=True
     )
-    budgets: Mapped[list[Budget]] = relationship(back_populates="user", lazy="selectin")
+    budgets: Mapped[list[Budget]] = relationship(
+        back_populates="user", passive_deletes=True
+    )
 
 
 class Category(Base):
@@ -68,7 +74,9 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID, ForeignKey("users.uid"), nullable=False
+        UUID,
+        ForeignKey("users.uid", ondelete="CASCADE"),
+        nullable=False,
     )
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     color_icon: Mapped[str] = mapped_column(String(50), nullable=True)
@@ -80,12 +88,14 @@ class Category(Base):
     )
 
     # updated for ASYNC
-    user: Mapped[User] = relationship(back_populates="categories", lazy="selectin")
+    user: Mapped[User] = relationship(
+        back_populates="categories",
+    )
     expenses: Mapped[list[Expense]] = relationship(
-        back_populates="category", lazy="selectin"
+        back_populates="category",
     )
     budgets: Mapped[list[Budget]] = relationship(
-        back_populates="category", lazy="selectin"
+        back_populates="category",
     )
 
 
@@ -118,9 +128,11 @@ class Expense(Base):
     )
 
     # updated for ASYNC
-    user: Mapped[User] = relationship(back_populates="expenses", lazy="selectin")
+    user: Mapped[User] = relationship(
+        back_populates="expenses",
+    )
     category: Mapped[Category] = relationship(
-        back_populates="expenses", lazy="selectin"
+        back_populates="expenses",
     )
 
 

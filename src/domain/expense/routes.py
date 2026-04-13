@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.oauth2 import get_current_user
@@ -10,9 +10,10 @@ from src.domain.expense.schemas import (
     ExpenseCreateSchema,
     ExpenseSchema,
     ExpenseUpdateSchema,
+    MetricsOverview,
     PaginatedResponseSchema,
 )
-from src.domain.expense.service import ExpenseService
+from src.domain.expense.service import ExpenseMetricGenerator, ExpenseService
 from src.models import User
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -37,8 +38,10 @@ async def list_expenses(
     end_date: date | None = None,
     min_value: Decimal | None = None,
     max_value: Decimal | None = None,
-    limit: int = Query(20, ge=1), # default is 20 and query param should be > =1 or error raised
-    page:int = 1
+    limit: int = Query(
+        20, ge=1
+    ),  # default is 20 and query param should be > =1 or error raised
+    page: int = 1,
 ):
     service = ExpenseService(db)
     return await service.get_all(
@@ -49,8 +52,18 @@ async def list_expenses(
         min_value=min_value,
         max_value=max_value,
         limit=limit,
-        page = page
+        page=page,
     )
+
+
+@router.get("/metrics", response_model=MetricsOverview)
+async def metrics(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = ExpenseMetricGenerator(db, current_user.uid)
+
+    return await service.run()
 
 
 @router.get("/{expense_id}", response_model=ExpenseSchema)

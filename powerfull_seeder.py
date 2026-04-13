@@ -1,9 +1,6 @@
-"""
-Seeder Tool for Expense App Database.
-"""
-
 import argparse
 import asyncio
+import datetime
 import random
 
 import factory
@@ -72,7 +69,6 @@ parser.add_argument(
 # -----------------------------------------------------------------------------
 faker = Faker()
 
-
 DEFAULT_PASSWORD_HASH = get_password_hash("Valid2026#")
 
 CATEGORIES_NAMES = [
@@ -94,14 +90,15 @@ BUDGETS_NAMES = [
     "other",
 ]
 
-
+# -----------------------------------------------------------------------------
 # Factories
+# -----------------------------------------------------------------------------
 
 
 class UserFactory(factory.alchemy.SQLAlchemyModelFactory):
     class Meta:
         model = User
-        sqlalchemy_session_persistence = None  # We will manually add to session
+        sqlalchemy_session_persistence = None
 
     username = factory.Sequence(lambda n: faker.unique.user_name())
     email = factory.Sequence(lambda n: faker.unique.email())
@@ -125,7 +122,11 @@ class ExpenseFactory(factory.alchemy.SQLAlchemyModelFactory):
     amount = factory.Sequence(lambda n: faker.pyfloat(min_value=3, max_value=120))
     note = factory.Sequence(lambda n: faker.sentence(20))
     transaction_date = factory.Sequence(
-        lambda n: faker.date_between(start_date="-365d", end_date="now")
+        lambda n: faker.date_time_between(
+            start_date="-365d",
+            end_date="now",
+            tzinfo=datetime.UTC,  # <- A mágica acontece aqui
+        )
     )
 
 
@@ -152,38 +153,56 @@ async def populate_users_and_data(
     expenses_per_user: int = 400,
 ):
     async with SessionLocal() as session:
-        factories = [UserFactory, CategoryFactory, ExpenseFactory, BudgetFactory]
-
-        for factory_cls in factories:
-            factory_cls._meta.sqlalchemy_session = session
-
-        # 1. Generate Users
-        users = target_users or UserFactory.build_batch(size=new_users_count)
-        session.add_all(users)
-        await session.commit()
-        print(f"[{len(users)}] Users created and saved.")
+        # 1. Setup / Merge Users
+        if target_users:
+            # Target users are likely detached; merge them safely into the new session.
+            users = [await session.merge(u) for u in target_users]
+        else:
+            users = UserFactory.build_batch(size=new_users_count)
+            session.add_all(users)
+            await session.commit()
+            print(f"[{len(users)}] Users created and saved.")
 
         # 2. Setup Categories & Budgets for each user
         user_categories: dict[str, list[Category]] = {}
-        all_related_data = []  # collect budgets and categories to bulk insert later
+        all_related_data = []
 
         for user in users:
-            # Generate exactly len(CATEGORIES_NAMES) categories per user
-            categories = CategoryFactory.build_batch(
-                size=len(CATEGORIES_NAMES), user=user
+            # Manual Async Get-Or-Create for Categories to respect UniqueConstraints
+            existing_cats_req = await session.execute(
+                select(Category).where(Category.user_id == user.uid)
             )
-            user_categories[user.uid] = categories
-            all_related_data.extend(categories)
+            existing_cats = {c.name: c for c in existing_cats_req.scalars().all()}
 
-            # Generate exactly len(BUDGETS_NAMES) budgets per user
-            budgets = [
-                BudgetFactory(user=user, category=random.choice(categories))
-                for _ in range(len(BUDGETS_NAMES))
+            categories = [
+                None,
             ]
-            all_related_data.extend(budgets)
+            for name in CATEGORIES_NAMES:
+                if name in existing_cats:
+                    categories.append(existing_cats[name])
+                else:
+                    new_cat = CategoryFactory.build(user=user, name=name)
+                    all_related_data.append(new_cat)
+                    categories.append(new_cat)
 
-        session.add_all(all_related_data)
-        await session.commit()
+            user_categories[user.uid] = categories
+
+            # Manual Async Get-Or-Create for Budgets
+            existing_budgets_req = await session.execute(
+                select(Budget).where(Budget.user_id == user.uid)
+            )
+            existing_budgets = {b.name: b for b in existing_budgets_req.scalars().all()}
+
+            for name in BUDGETS_NAMES:
+                if name not in existing_budgets:
+                    new_budget = BudgetFactory.build(
+                        user=user, name=name, category=random.choice(categories)
+                    )
+                    all_related_data.append(new_budget)
+
+        if all_related_data:
+            session.add_all(all_related_data)
+            await session.commit()
         print("Categories and Budgets initialized for all users.")
 
         # 3. Generate Expenses in Bulk
@@ -208,62 +227,49 @@ async def populate_users_and_data(
                 await session.commit()
                 all_expenses.clear()
 
-        session.add_all(all_expenses)
-        await session.commit()
+        if all_expenses:
+            session.add_all(all_expenses)
+            await session.commit()
 
-        print(f"[{len(all_expenses)}] Expenses successfully seeded.")
-
-        # Logging
-        print(
-            f"\n{'=' * 50}\n"
-            f"Database Population Summary\n"
-            f"{'=' * 50}\n"
-            f"  Users:      {len(users)}\n"
-            f"  Categories: {len(users) * len(CATEGORIES_NAMES)}\n"
-            f"  Budgets:    {len(users) * len(BUDGETS_NAMES)}\n"
-            f"  Expenses:   {len(users) * expenses_per_user}\n"
-            f"{'=' * 50}\n"
-        )
+        print(f"[{len(users) * expenses_per_user}] Expenses successfully seeded.")
 
 
 async def populate_single_user(email: str, expenses_per_user: int = 400):
     async with SessionLocal() as session:
-        existing_user = await session.execute(select(User).filter(User.email == email))
-        existing_user = existing_user.scalar_one_or_none()
-        user = None
-        if not existing_user:
-            UserFactory._meta.sqlalchemy_session = session
-            user = UserFactory(email=email)
+        existing_user_result = await session.execute(
+            select(User).filter(User.email == email)
+        )
+        user = existing_user_result.scalar_one_or_none()
+
+        if not user:
+            # Just build locally, let session.add() manage the rest
+            user = UserFactory.build(email=email)
             session.add(user)
             await session.commit()
             print(f"User with email '{email}' created.")
-            # Close session to avoid issues with detached instances
         else:
-            user = existing_user
-        session.close()
+            print(f"User with email '{email}' already exists.")
 
+    # The session cleans itself up via `async with` context manager.
     await populate_users_and_data([user], expenses_per_user=expenses_per_user)
 
 
 async def populate_existing_users(expenses_per_user: int = 400):
     async with SessionLocal() as session:
-        existing_users = await session.execute(session.query(User))
-        existing_users = existing_users.scalars().all()
+        # Avoid `session.query` with AsyncSession. Replaced with `select`
+        existing_users_result = await session.execute(select(User))
+        existing_users = existing_users_result.scalars().all()
 
         if not existing_users:
-            print(
-                """ No existing users found. Please run
-                --seed-new-users to create random users\n
-                or \n
-                --user-email passing an email to create a user."""
-            )
+            print("No existing users found. Please run --seed-new-users")
             return
 
         print(f"Found {len(existing_users)} existing users. Populating expenses...")
 
-        await populate_users_and_data(
-            target_users=existing_users, expenses_per_user=expenses_per_user
-        )
+    # existing_users are technically detached here but populate_users_and_data properly re-merges them
+    await populate_users_and_data(
+        target_users=list(existing_users), expenses_per_user=expenses_per_user
+    )
 
 
 if __name__ == "__main__":
