@@ -49,11 +49,19 @@ class User(Base):
     )
 
     # updated for ASYNC
-    categories: Mapped[list[Category]] = relationship(back_populates="user",)
-    expenses: Mapped[list[Expense]] = relationship(
-        back_populates="user",
+
+    # Removed lazy="selectin" that was causing extreme overhead when get a user with
+    # lot of expense
+    # Using passive delete to avoid sqlachemty set expenses.user_id to NULL before delete
+    categories: Mapped[list[Category]] = relationship(
+        back_populates="user", passive_deletes=True
     )
-    budgets: Mapped[list[Budget]] = relationship(back_populates="user",)
+    expenses: Mapped[list[Expense]] = relationship(
+        back_populates="user", passive_deletes=True
+    )
+    budgets: Mapped[list[Budget]] = relationship(
+        back_populates="user", passive_deletes=True
+    )
 
 
 class Category(Base):
@@ -80,7 +88,9 @@ class Category(Base):
     )
 
     # updated for ASYNC
-    user: Mapped[User] = relationship(back_populates="categories",)
+    user: Mapped[User] = relationship(
+        back_populates="categories",
+    )
     expenses: Mapped[list[Expense]] = relationship(
         back_populates="category",
     )
@@ -118,8 +128,12 @@ class Expense(Base):
     )
 
     # updated for ASYNC
-    user: Mapped[User] = relationship(back_populates="expenses",)
-    category: Mapped[Category] = relationship(back_populates="expenses", )
+    user: Mapped[User] = relationship(
+        back_populates="expenses",
+    )
+    category: Mapped[Category] = relationship(
+        back_populates="expenses",
+    )
 
 
 class Budget(Base):
