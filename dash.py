@@ -4,7 +4,7 @@ import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select, and_
+from sqlalchemy import func, select, and_, text, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.database import SessionLocal
@@ -12,6 +12,40 @@ from src.domain.expense.schemas import CategoryMetricSchema, CategorySchema
 from src.domain.expense.schemas import PeriodMetrics
 from src.models import Category
 from src.models import Expense
+import calendar
+import datetime
+from decimal import Decimal
+from math import ceil
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy import func, select, and_, extract, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.common.base_service import BaseService
+from src.db import SessionLocal
+from src.domain.category.schemas import CategorySchema
+from src.domain.category.service import CategoryService
+from src.domain.expense.schemas import CategoryMetricSchema
+from src.domain.expense.schemas import DailyMetrics
+from src.domain.expense.schemas import (
+    ExpenseCreateSchema,
+    ExpenseSchema,
+    ExpenseUpdateSchema,
+    PaginatedResponseSchema,
+    PeriodMetrics,
+)
+from src.domain.expense.schemas import MetaSchema
+from src.domain.expense.schemas import (
+    VariationMetrics,
+    MetricsOverview,
+    BudgetMetricSchema,
+)
+from src.exceptions import DatabaseException, EntityNotFoundException
+from src.models import Category
+from src.models import Expense
+from src.models import Budget
 
 
 class ExpenseMetricGenerator:
@@ -231,22 +265,63 @@ class ExpenseMetricGenerator:
         """
         return ((current - before) / (before if before != 0 else 1)) * 100
 
+    async def get_budgte_metrics(self):
 
-async def run_categories_extractor():
+        today = datetime.datetime.now(tz=datetime.UTC).date()
+
+        statement = (
+            select(
+                Budget,  # Budget it self
+                Budget.category_id.label("cat_id"),  # category id
+                func.sum(Expense.amount).label("spent"),  # sum of all expenses
+                Budget.amount_limit,  # Budget target amount
+                (func.sum(Expense.amount / Budget.amount_limit * 100)).label(
+                    "total_used"
+                ),  # total of use in percentage of all expenses agaisnt the amount limit
+                (func.avg(Expense.amount)).label("average"),  # Average amount of spends
+            )
+            .join(
+                Expense,
+                and_(
+                    Budget.category_id == Expense.category_id,
+                    Budget.month_year <= Expense.transaction_date,
+                    Expense.transaction_date
+                    < Budget.month_year + text("INTERVAL '1 MONTH'"),
+                ),
+                isouter=True,
+            )
+            .where(
+                extract("month", Budget.month_year) == today.month,
+                extract("year", Budget.month_year) == today.year,
+            )
+            .group_by(Budget.id)
+        )
+
+        rows = await self.db.execute(statement=statement)
+
+        return [
+            BudgetMetricSchema(
+                budget=row.Budget,
+                limit=row.amount_limit,
+                percentage_used=row.total_used or Decimal(0),
+                spending_average=row.average or Decimal(0),
+                spent=row.spent or Decimal(0),
+            )
+            for row in rows
+        ]
+
+
+async def run_budget_extractor():
     USER_ID = "26089e8a-f002-4495-b420-0c2edde4e913"
 
     async with SessionLocal.begin() as session:
         service = ExpenseMetricGenerator(session, USER_ID)
-        from sqlalchemy import and_
-
-        result = await service.get(
-            and_(Expense.transaction_date > datetime.date(2026, 1, 1))
-        )
 
         from pprint import pprint
 
-        pprint(result)
+        res = await service.get_budgte_metrics()
+        pprint(res)
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    asyncio.run(run_budget_extractor())

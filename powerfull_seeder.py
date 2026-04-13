@@ -174,7 +174,9 @@ async def populate_users_and_data(
             )
             existing_cats = {c.name: c for c in existing_cats_req.scalars().all()}
 
-            categories = []
+            categories = [
+                None,
+            ]
             for name in CATEGORIES_NAMES:
                 if name in existing_cats:
                     categories.append(existing_cats[name])

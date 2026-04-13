@@ -46,6 +46,10 @@ class DailyMetrics(BaseModel):
     total: Decimal
     count: int
 
+class PeakSpendingDay(DailyMetrics):
+    date : date
+
+
 
 class PeriodMetrics(BaseModel):
     """
@@ -63,6 +67,9 @@ class PeriodMetrics(BaseModel):
     total: Decimal
     daily: dict[date, DailyMetrics]
     category_metrics: list[CategoryMetricSchema] | None = []
+    peak_spending : PeakSpendingDay | None = None
+    projection : Decimal | None = None
+    total_transaction : int = 0
 
 
 class VariationMetrics(BaseModel):
@@ -89,18 +96,22 @@ class MetricsOverview(BaseModel):
 
     variation: VariationMetrics
 
+    budgets_metrics: list[BudgetMetricSchema]
+
 
 class BudgetMetricSchema(BaseModel):
     budget: BudgetSchema
     percentage_used: Decimal
-    spent: Decimal
     limit: Decimal
+    spent: Decimal
+    spending_average: Decimal
 
 
 class CategoryMetricSchema(BaseModel):
     category: CategorySchema
     percentage_of_total: Decimal
     total: Decimal
+    transaction_count : int
 
 
 class MetaSchema(BaseModel):

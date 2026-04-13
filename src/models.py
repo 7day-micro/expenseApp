@@ -49,13 +49,11 @@ class User(Base):
     )
 
     # updated for ASYNC
-    categories: Mapped[list[Category]] = relationship(
-        back_populates="user", lazy="selectin"
-    )
+    categories: Mapped[list[Category]] = relationship(back_populates="user",)
     expenses: Mapped[list[Expense]] = relationship(
-        back_populates="user", lazy="selectin"
+        back_populates="user",
     )
-    budgets: Mapped[list[Budget]] = relationship(back_populates="user", lazy="selectin")
+    budgets: Mapped[list[Budget]] = relationship(back_populates="user",)
 
 
 class Category(Base):
@@ -82,12 +80,12 @@ class Category(Base):
     )
 
     # updated for ASYNC
-    user: Mapped[User] = relationship(back_populates="categories", lazy="selectin")
+    user: Mapped[User] = relationship(back_populates="categories",)
     expenses: Mapped[list[Expense]] = relationship(
-        back_populates="category", lazy="selectin"
+        back_populates="category",
     )
     budgets: Mapped[list[Budget]] = relationship(
-        back_populates="category", lazy="selectin"
+        back_populates="category",
     )
 
 
@@ -120,10 +118,8 @@ class Expense(Base):
     )
 
     # updated for ASYNC
-    user: Mapped[User] = relationship(back_populates="expenses", lazy="selectin")
-    category: Mapped[Category] = relationship(
-        back_populates="expenses", lazy="selectin"
-    )
+    user: Mapped[User] = relationship(back_populates="expenses",)
+    category: Mapped[Category] = relationship(back_populates="expenses", )
 
 
 class Budget(Base):

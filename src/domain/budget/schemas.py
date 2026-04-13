@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+from src.domain.category.schemas import CategorySchema
 
 
 class BudgetSchema(BaseModel):
@@ -16,7 +17,8 @@ class BudgetSchema(BaseModel):
     created_at: datetime
     month_year: datetime
 
-    category_id: int | None
+    category_id: int | None = None
+    category : CategorySchema | None = None
 
 
 class BudgetCreateSchema(BaseModel):

@@ -1,8 +1,10 @@
 import calendar
 import datetime
 from decimal import Decimal
+from math import ceil
 from typing import Any
 from uuid import UUID
+from dateutil.relativedelta import relativedelta
 
 from sqlalchemy import func, select, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,7 +15,7 @@ from src.db import SessionLocal
 from src.domain.category.schemas import CategorySchema
 from src.domain.category.service import CategoryService
 from src.domain.expense.schemas import CategoryMetricSchema
-from src.domain.expense.schemas import DailyMetrics
+from src.domain.expense.schemas import DailyMetrics, PeakSpendingDay
 from src.domain.expense.schemas import (
     ExpenseCreateSchema,
     ExpenseSchema,
@@ -21,14 +23,20 @@ from src.domain.expense.schemas import (
     PaginatedResponseSchema,
     PeriodMetrics,
 )
-from src.domain.expense.schemas import VariationMetrics, MetricsOverview
+from src.domain.expense.schemas import MetaSchema
+from src.domain.expense.schemas import (
+    VariationMetrics,
+    MetricsOverview,
+    BudgetMetricSchema,
+)
 from src.exceptions import DatabaseException, EntityNotFoundException
 from src.models import Category
 from src.models import Expense
+from src.models import Budget
 
-from math import ceil
-
-from src.domain.expense.schemas import MetaSchema
+from typing import Literal
+from asyncio import gather
+PERIOD_TIME = Literal["curr_week", "curr_month", "last_week", "last_month"]
 
 
 class ExpenseService(
@@ -131,7 +139,7 @@ class ExpenseService(
     async def get_all(
         self,
         user_id: UUID,
-        page:int  = 1,
+        page: int = 1,
         limit: int = 20,
         date_filter: datetime.date | None = None,
         start_date: datetime.date | None = None,
@@ -140,9 +148,11 @@ class ExpenseService(
         max_value: Decimal | None = None,
     ) -> PaginatedResponseSchema:
         if limit < 1:
-            raise 
-        statement = select(Expense).where(Expense.user_id == user_id) #statement for extraction
-        
+            raise
+        statement = select(Expense).where(
+            Expense.user_id == user_id
+        )  # statement for extraction
+
         if date_filter is not None:
             statement = statement.where(
                 func.date(Expense.transaction_date) == date_filter
@@ -163,24 +173,33 @@ class ExpenseService(
             statement = statement.where(Expense.amount <= max(0, max_value))
 
         count_statement = select(func.count()).select_from(statement.subquery())
-        total_count = (await self.db.execute(count_statement)).scalar() or 0 #Return 0 instead of None if no such expense. Otherwise return the count
+        total_count = (
+            (await self.db.execute(count_statement)).scalar() or 0
+        )  # Return 0 instead of None if no such expense. Otherwise return the count
 
         max_limit = 50
 
-        safe_page = max(1, page) #Sanitize for positive value
-        safe_limit = min(limit, max_limit) #ensure limit is positive and at most 50. 
+        safe_page = max(1, page)  # Sanitize for positive value
+        safe_limit = min(limit, max_limit)  # ensure limit is positive and at most 50.
 
         statement = statement.order_by(
             Expense.transaction_date.desc(), Expense.id.desc()
         )
 
-        statement = statement.offset((safe_page - 1)* safe_limit).limit(safe_limit) #Subtracting 1 as default page is 1 which is first page with no offset      
+        statement = statement.offset((safe_page - 1) * safe_limit).limit(
+            safe_limit
+        )  # Subtracting 1 as default page is 1 which is first page with no offset
 
         result = await self.db.execute(statement)
-        result_list =  list(result.scalars().all())
+        result_list = list(result.scalars().all())
 
-        meta = MetaSchema(total = total_count, count = len(result_list), page = safe_page, total_pages=ceil(total_count/safe_limit))
-        return PaginatedResponseSchema(data=result_list, meta = meta)
+        meta = MetaSchema(
+            total=total_count,
+            count=len(result_list),
+            page=safe_page,
+            total_pages=ceil(total_count / safe_limit),
+        )
+        return PaginatedResponseSchema(data=result_list, meta=meta)
 
 
 class ExpenseMetricGenerator:
@@ -190,15 +209,22 @@ class ExpenseMetricGenerator:
 
     @property
     def last_month_range_statement(self):
-        today = datetime.datetime.now(tz=datetime.UTC).date()
+        today = datetime.datetime.now(tz=datetime.UTC).replace(
+            hour=0,
+            microsecond=0,
+            minute=0,
+            second=0,
+        )
 
-        current_month_first_day = today.replace(day=1)
+        current_month_first_day = today.replace(day=1).replace(
+            hour=0,
+            microsecond=0,
+            minute=0,
+            second=0,
+        )
         passed_month_last_day = current_month_first_day - datetime.timedelta(days=1)
         passed_month_first_day = passed_month_last_day.replace(day=1)
 
-        month_days_count = calendar.monthrange(
-            passed_month_first_day.year, month=passed_month_first_day.month
-        )[1]
         return and_(
             Expense.transaction_date >= passed_month_first_day,
             Expense.transaction_date < current_month_first_day,
@@ -206,7 +232,12 @@ class ExpenseMetricGenerator:
 
     @property
     def current_month_range_statement(self):
-        today = datetime.datetime.now(tz=datetime.UTC).date()
+        today = datetime.datetime.now(tz=datetime.UTC).replace(
+            hour=0,
+            microsecond=0,
+            minute=0,
+            second=0,
+        )
         tomorrow = today + datetime.timedelta(days=1)
 
         current_month_first_day = today.replace(day=1)
@@ -218,7 +249,12 @@ class ExpenseMetricGenerator:
 
     @property
     def last_week_range_statement(self):
-        today = datetime.datetime.now(tz=datetime.UTC).date()
+        today = datetime.datetime.now(tz=datetime.UTC).replace(
+            hour=0,
+            microsecond=0,
+            minute=0,
+            second=0,
+        )
         today_weekday = today.isoweekday()
 
         current_week_first_day = today - datetime.timedelta(days=today_weekday - 1)
@@ -231,7 +267,12 @@ class ExpenseMetricGenerator:
 
     @property
     def current_week_range_statement(self):
-        today = datetime.datetime.now(tz=datetime.UTC).date()
+        today = datetime.datetime.now(tz=datetime.UTC).replace(
+            hour=0,
+            microsecond=0,
+            minute=0,
+            second=0,
+        )
         tomorrow = today + datetime.timedelta(days=1)
 
         today_weekday = today.isoweekday()
@@ -249,42 +290,105 @@ class ExpenseMetricGenerator:
                 func.sum(Expense.amount).label("total"),
                 func.count("*").label("count"),
                 func.sum(func.sum(Expense.amount)).over().label("grand_total"),
+                func.sum(func.count("*")).over().label("total_transactions"),
                 func.date(Expense.transaction_date).label("day"),
             )
             .where(Expense.user_id == self.uid, range_statement)
-            .group_by(func.date(Expense.transaction_date))
-            .order_by(func.date(Expense.transaction_date))
+            .group_by(Expense.transaction_date)
+            .order_by(Expense.transaction_date)
         )
 
     @staticmethod
     def get_percentage_of_total(total: Decimal, part: Decimal):
         return Decimal((part / max(1, total)) * 100).quantize(Decimal("0.00"))
+    
+    async def get_period_metrics(self, period : PERIOD_TIME):
 
-    async def get_period_metrics(self, time_range_stmt):
+        ### GETTING THE NUMBER OF DAYS FOR AVERAGE CALCULATIONS
+        today = datetime.datetime.now(tz=datetime.UTC).replace(
+            hour=0,
+            microsecond=0,
+            minute=0,
+            second=0,
+        )
+        time_range_stmt = ""
+        num_days = 0
+        match period:
+            case "curr_month":
+                time_range_stmt = self.current_month_range_statement
+                num_days = today.day
+            case "curr_week":
+                time_range_stmt = self.current_week_range_statement
+                num_days = today.isoweekday()
+            case "last_month":
+                time_range_stmt = self.last_month_range_statement
+                num_days = (today.replace(day=1) - datetime.timedelta(days=1)).day
+            case "last_week":
+                time_range_stmt = self.last_week_range_statement
+                num_days = 7
+            case _:
+                raise ValueError("metrics need a period")
+
+        ## INITIALIZING THE STATEMENT AKA QUERY
         stmt = self.get_statement(time_range_stmt)
-
         result = await self.db.execute(statement=stmt)
 
+        ### GETING ALL ROWS FROM THE RESULT 
         rows = result.all()
+
+        ### STARTING THE EXTRACTION OF DATA
         grand_total = rows[0].grand_total if rows else Decimal(0)
+
+        # CREATING DAILY_METRICS FOR EACH DAY THAT HAVE TRANSACTION
         days = {row.day: DailyMetrics(total=row.total, count=row.count) for row in rows}
+
+        ## GETTING THE AVERAGE  DAILY SPENDING;; INCLUDING DAYS WITH NO TRANSACTION
         average_daily_spending = Decimal(
-            grand_total / datetime.datetime.now(tz=datetime.UTC).date().isoweekday()
+            grand_total / max(1, num_days)
         ).quantize(Decimal("0.00"))
 
+
+        # We can check if we have grand total that Already check if we got some row
+        total_transaction = rows[0].total_transactions if grand_total else 0
+
         category_metrics = await self.get_category_metrics(
-            time_range_stmt=self.current_month_range_statement
+            time_range_stmt=time_range_stmt
         )
+
+        peak_day = max(days.items(), key=lambda x : x[1].total) if days else None
+
+        peak_spending_day = PeakSpendingDay(
+                count=peak_day[1].count,
+                date=peak_day[0],
+                total=peak_day[1].total
+        ) if peak_day else None
+
+        days_for_projection = 0
+        match period:
+            case "curr_month":
+                first_day_next_month = (today + datetime.timedelta(days=32)).replace(day=1)
+                curr_month_day_count = (first_day_next_month - datetime.timedelta(days=1)).day
+                days_for_projection = curr_month_day_count
+            case "curr_week":
+                days_for_projection = 7
+        
+        projection = average_daily_spending * days_for_projection
+
 
         return PeriodMetrics(
             daily=days,
             total=grand_total,
             average_daily=average_daily_spending,
             category_metrics=category_metrics,
+            peak_spending=peak_spending_day,
+            projection=projection,
+            total_transaction=total_transaction
         )
 
     @staticmethod
     def get_past_vs_current(before: Decimal, current: Decimal):
+        if before is None or current is None:
+            raise ValueError("cant")
         return ((current - before) / (before if before != 0 else 1)) * 100
 
     async def get_category_metrics(self, time_range_stmt) -> list[CategoryMetricSchema]:
@@ -298,6 +402,7 @@ class ExpenseMetricGenerator:
             select(
                 Category.name.label("cat_name"),
                 func.sum(Expense.amount).label("total"),
+                func.count(Expense.amount).label("transaction_count"),
                 grand_total_st.label("grand_total"),
                 Category,
             )
@@ -317,6 +422,7 @@ class ExpenseMetricGenerator:
         return [
             CategoryMetricSchema(
                 total=row.total,
+                transaction_count=row.transaction_count,
                 category=CategorySchema.model_validate(row.Category),
                 percentage_of_total=ExpenseMetricGenerator.get_percentage_of_total(
                     row.grand_total, row.total
@@ -325,15 +431,65 @@ class ExpenseMetricGenerator:
             for row in rows
         ]
 
+    async def get_budgte_metrics(self):
+
+        today = datetime.datetime.now(tz=datetime.UTC).replace(
+            hour=0,
+            microsecond=0,
+            minute=0,
+            second=0,
+        )
+
+
+        first_month_day = today.replace(day=1)
+        next_month_first_day = (today + datetime.timedelta(days=32)).replace(day=1)
+
+        statement = (
+            select(
+                Budget,  # Budget it self
+                Budget.category_id.label("cat_id"),  # category id
+                func.sum(Expense.amount).label("spent"),  # sum of all expenses
+                Budget.amount_limit,  # Budget target amount
+                (func.sum(Expense.amount / Budget.amount_limit * 100)).label(
+                    "total_used"
+                ),  # total of use in percentage of all expenses agaisnt the amount limit
+                (func.avg(Expense.amount)).label("average"),  # Average amount of spends
+            )
+            .join(
+                Expense,
+                and_(
+                    Budget.category_id == Expense.category_id,
+                    Budget.month_year <= Expense.transaction_date,
+                    Expense.transaction_date< next_month_first_day,
+                ),
+            )
+            .where(
+                Budget.month_year <= next_month_first_day,
+                Budget.month_year >= first_month_day
+            )
+            .group_by(Budget.id)
+        )
+
+        rows = await self.db.execute(statement=statement)
+
+        return [
+            BudgetMetricSchema(
+                budget=row.Budget,
+                limit=row.amount_limit,
+                percentage_used=row.total_used or Decimal(0),
+                spending_average=row.average or Decimal(0),
+                spent=row.spent or Decimal(0),
+            )
+            for row in rows
+        ]
+
     async def run(self):
         async with SessionLocal.begin() as session:
-            last_month = await self.get_period_metrics(self.last_month_range_statement)
-            last_week = await self.get_period_metrics(self.last_week_range_statement)
-            current_month = await self.get_period_metrics(
-                self.current_month_range_statement
-            )
-            current_week = await self.get_period_metrics(
-                self.current_week_range_statement
+            last_month, current_month, last_week, current_week = await gather(
+                self.get_period_metrics("last_month"),
+                self.get_period_metrics("curr_month"),
+                self.get_period_metrics("last_week"),
+                self.get_period_metrics("curr_week"),
             )
 
             ## VS ============
@@ -364,10 +520,13 @@ class ExpenseMetricGenerator:
                 from_last_month_total=from_last_month_total,
             )
 
+            budget_metric = await self.get_budgte_metrics()
+
             return MetricsOverview(
                 current_month=current_month,
                 last_month=last_month,
-                current_week=current_month,
+                current_week=current_week,
                 last_week=last_week,
                 variation=variations,
+                budgets_metrics=budget_metric,
             )
