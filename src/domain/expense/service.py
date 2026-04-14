@@ -293,14 +293,14 @@ class ExpenseMetricGenerator:
         return (
             select(
                 func.sum(Expense.amount).label("total"),
-                func.count("*").label("count"),
+                func.count("*").label("count_"),
                 func.sum(func.sum(Expense.amount)).over().label("grand_total"),
                 func.sum(func.count("*")).over().label("total_transactions"),
                 func.date(Expense.transaction_date).label("day"),
             )
             .where(Expense.user_id == self.uid, range_statement)
-            .group_by(Expense.transaction_date)
-            .order_by(Expense.transaction_date)
+            .group_by(func.date(Expense.transaction_date))
+            .order_by(func.date(Expense.transaction_date))
         )
 
     @staticmethod
@@ -347,7 +347,9 @@ class ExpenseMetricGenerator:
         grand_total = rows[0].grand_total if rows else Decimal(0)
 
         # Build a day-indexed map only for days with transactions.
-        days = {row.day: DailyMetrics(total=row.total, count=row.count) for row in rows}
+        days = {
+            row.day: DailyMetrics(total=row.total, count=row.count_) for row in rows
+        }
 
         # Average uses elapsed days, so days with no transactions are included.
         average_daily_spending = Decimal(grand_total / max(1, num_days)).quantize(
