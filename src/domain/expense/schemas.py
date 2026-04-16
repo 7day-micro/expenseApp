@@ -1,6 +1,5 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -46,9 +45,9 @@ class DailyMetrics(BaseModel):
     total: Decimal
     count: int
 
-class PeakSpendingDay(DailyMetrics):
-    date : date
 
+class PeakSpendingDay(DailyMetrics):
+    date: date
 
 
 class PeriodMetrics(BaseModel):
@@ -67,9 +66,9 @@ class PeriodMetrics(BaseModel):
     total: Decimal
     daily: dict[date, DailyMetrics]
     category_metrics: list[CategoryMetricSchema] | None = []
-    peak_spending : PeakSpendingDay | None = None
-    projection : Decimal | None = None
-    total_transaction : int = 0
+    peak_spending: PeakSpendingDay | None = None
+    projection: Decimal | None = None
+    total_transaction: int = 0
 
 
 class VariationMetrics(BaseModel):
@@ -111,7 +110,7 @@ class CategoryMetricSchema(BaseModel):
     category: CategorySchema
     percentage_of_total: Decimal
     total: Decimal
-    transaction_count : int
+    transaction_count: int
 
 
 class MetaSchema(BaseModel):
