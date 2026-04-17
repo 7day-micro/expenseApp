@@ -1,4 +1,4 @@
-from datetime import date
+import datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query, status
@@ -10,10 +10,11 @@ from src.domain.expense.schemas import (
     ExpenseCreateSchema,
     ExpenseSchema,
     ExpenseUpdateSchema,
-    MetricsOverview,
     PaginatedResponseSchema,
 )
-from src.domain.expense.service import ExpenseMetricGenerator, ExpenseService
+from src.domain.expense.service import ExpenseService
+from src.domain.metrics.schemas import MetricsOverview
+from src.domain.metrics.services.period_metrics_service import PeriodMetricsService
 from src.models import User
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -33,9 +34,9 @@ async def create_expense(
 async def list_expenses(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    date: date | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
+    date: datetime.date | None = None,
+    start_date: datetime.date | None = None,
+    end_date: datetime.date | None = None,
     min_value: Decimal | None = None,
     max_value: Decimal | None = None,
     limit: int = Query(
@@ -60,10 +61,16 @@ async def list_expenses(
 async def metrics(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    start_date: datetime.date | None = None,
+    end_date: datetime.date | None = None,
+    year: bool = False,
 ):
-    service = ExpenseMetricGenerator(db, current_user.uid)
 
-    return await service.run()
+    service = PeriodMetricsService(
+        session=db, user_id=current_user.uid, start_date=start_date, end_date=end_date
+    )
+
+    return await service.execute(with_range=False, last_year=year)
 
 
 @router.get("/{expense_id}", response_model=ExpenseSchema)
