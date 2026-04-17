@@ -228,7 +228,7 @@ class TestBudgetRoutes:
         delete_response = await authenticated_client.delete(
             f"{BUDGET_BASE_PATH}/{budget_id}"
         )
-        assert delete_response.status_code == 200
+        assert delete_response.status_code == 204
 
         get_response = await authenticated_client.get(f"{BUDGET_BASE_PATH}/{budget_id}")
         assert get_response.status_code == 404

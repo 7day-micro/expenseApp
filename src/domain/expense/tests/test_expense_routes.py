@@ -358,7 +358,7 @@ class TestExpenseRoutes:
         expense_id = created.json()["id"]
 
         del_resp = await authenticated_client.delete(f"/expenses/{expense_id}")
-        assert del_resp.status_code == 200
+        assert del_resp.status_code == 204
 
         get_resp = await authenticated_client.get(f"/expenses/{expense_id}")
         assert get_resp.status_code == 404
