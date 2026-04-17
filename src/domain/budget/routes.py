@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.oauth2 import get_current_user
 from src.db.database import get_db
 from src.domain.budget.schemas import (
-    BudgetUpdateSchema,
     BudgetCreateSchema,
     BudgetSchema,
+    BudgetUpdateSchema,
 )
 from src.domain.budget.service import BudgetService
 from src.models import User
@@ -61,4 +62,5 @@ async def delete_budget(
     current_user: User = Depends(get_current_user),
 ):
     service = BudgetService(db)
-    return await service.delete(budget_id, current_user.uid)
+    await service.delete(budget_id, current_user.uid)
+    return Response(status_code=204)

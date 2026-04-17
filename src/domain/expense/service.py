@@ -39,7 +39,7 @@ class ExpenseService(
 
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            await category_service.get_by_id(data.category_id, user_id)
+            category = await category_service.get_by_id(data.category_id, user_id)
 
         expense = Expense(**data.model_dump(exclude={"user_id"}))
         expense.user_id = user_id
@@ -56,6 +56,9 @@ class ExpenseService(
                 details={"user_id": str(user_id), "original_error": str(e)},
             ) from e
 
+        if data.category_id:
+            expense.category = category
+
         return expense
 
     async def update(
@@ -63,15 +66,13 @@ class ExpenseService(
     ) -> Expense:
         expense = await self.get_by_id(object_id, user_id)
 
-        if data.category_id is not None:
-            category_service = CategoryService(self.db)
-            await category_service.get_by_id(data.category_id, user_id)
-
         # Since exclude_none will ignore all fields
         # and sometimes we want get category_id set to None
         # The use of exclude_none here is not suitable
         # So we need to manually loop through the fields and set
         # them if they are not None (except for category_id which can be set to None)
+        if data.category_id:
+            await CategoryService(self.db).get_by_id(data.category_id, user_id=user_id)
 
         for key, value in data.model_dump(
             exclude={"user_id"}, exclude_unset=True
@@ -85,7 +86,6 @@ class ExpenseService(
         try:
             await self.db.commit()
             await self.db.refresh(expense)
-            return expense
         except SQLAlchemyError as e:
             await self.db.rollback()
             raise DatabaseException(
@@ -98,13 +98,23 @@ class ExpenseService(
                 },
             ) from e
 
-    async def delete(self, object_id: Any, user_id: UUID) -> Expense:
+        stmt = (
+            select(Expense)
+            .options(selectinload(Expense.category))
+            .where(Expense.id == expense.id)
+        )
+
+        result = await self.db.execute(stmt)
+
+        return result.scalar_one()
+
+    async def delete(self, object_id: Any, user_id: UUID) -> None:
         expense = await self.get_by_id(object_id, user_id)
 
         try:
             await self.db.delete(expense)
             await self.db.commit()
-            return expense
+
         except SQLAlchemyError as e:
             await self.db.rollback()
             raise DatabaseException(
@@ -144,9 +154,7 @@ class ExpenseService(
     ) -> PaginatedResponseSchema:
         statement = (
             select(Expense)
-            .options(
-                selectinload(Expense.category)
-            )  # Loading the categories to avoid N+1
+            .options(selectinload(Expense.category))
             .where(Expense.user_id == user_id)
         )
 

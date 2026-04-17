@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 
 from src.common import BaseService
 from src.domain.budget.schemas import (
@@ -30,7 +31,7 @@ class BudgetService(
         """
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            await category_service.get_by_id(data.category_id, user_id)
+            category = await category_service.get_by_id(data.category_id, user_id)
 
         data.month_year = data.month_year.replace(day=1)
 
@@ -46,6 +47,9 @@ class BudgetService(
                 entity_name="budget",
                 details={"user_id": str(user_id), "original_error": str(e)},
             ) from e
+
+        if data.category_id:
+            new_budget.category = category
 
         return new_budget
 
@@ -71,7 +75,7 @@ class BudgetService(
 
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            await category_service.get_by_id(data.category_id, user_id)
+            category = await category_service.get_by_id(data.category_id, user_id)
 
         for key, value in data.model_dump(
             exclude_unset=True, exclude_none=True
@@ -94,9 +98,13 @@ class BudgetService(
                     "original_error": str(e),
                 },
             )
+
+        if data.category_id:
+            budget.category = category
+
         return budget
 
-    async def delete(self, object_id: int, user_id: UUID) -> Budget | None:
+    async def delete(self, object_id: int, user_id: UUID) -> None:
         """
         Delete a Budget belonging to the specified user.
 
@@ -126,7 +134,6 @@ class BudgetService(
                     "original_error": str(e),
                 },
             )
-        return result
 
     async def get_by_id(self, object_id: int, user_id: UUID) -> Budget | None:
         """
@@ -142,7 +149,11 @@ class BudgetService(
         Raises:
             EntityNotFoundException: If no Budget exists with the given id for the specified user.
         """
-        query = select(Budget).where(Budget.id == object_id, Budget.user_id == user_id)
+        query = (
+            select(Budget)
+            .options(selectinload(Budget.category))
+            .where(Budget.id == object_id, Budget.user_id == user_id)
+        )
         result = (await self.db.execute(query)).scalar_one_or_none()
 
         if result is None:
