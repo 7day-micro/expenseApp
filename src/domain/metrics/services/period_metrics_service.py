@@ -31,7 +31,7 @@ class PeriodMetricsService:
         self._start_date = start_date
         self._end_date = end_date
 
-    def __get_period(self, period: PERIOD_TIME) -> tuple[datetime.date, datetime.date]:
+    def get_period(self, period: PERIOD_TIME) -> tuple[datetime.date, datetime.date]:
         today = datetime.datetime.now(tz=datetime.UTC).date()
         tomorrow = today + relativedelta(days=1)
         # MONTH RELATED
@@ -54,9 +54,7 @@ class PeriodMetricsService:
             case "last_week":
                 return (past_week_first_day, current_week_first_day)
 
-    async def get_period_metrics(
-        self, start_date: datetime.date, end_date: datetime.date
-    ):
+    async def get_metrics(self, start_date: datetime.date, end_date: datetime.date):
         """Computes dashboard metrics for a single period label."""
 
         days = await DailyMetricsService(
@@ -67,7 +65,7 @@ class PeriodMetricsService:
 
         grand_total = Decimal(sum(t.total_spent for t in days if t.total_spent))
 
-        average_daily_spending = grand_total / num_days
+        average_daily_spending = grand_total / max(1, num_days)
 
         projection = Decimal(average_daily_spending * num_days).quantize(
             Decimal("0.00")
@@ -106,18 +104,18 @@ class PeriodMetricsService:
             start = today - relativedelta(months=i)
             end = today - relativedelta(months=i - 1)
 
-            res = await self.get_period_metrics(start, end)
+            res = await self.get_metrics(start, end)
 
             months_metrics[start] = res
 
         return months_metrics
 
-    async def execute(self, with_range, last_year=False):
+    async def execute(self, with_range, last_year=True):
         """Generates the complete metrics overview payload."""
-        last_month = await self.get_period_metrics(*self.__get_period("last_month"))
-        current_month = await self.get_period_metrics(*self.__get_period("curr_month"))
-        last_week = await self.get_period_metrics(*self.__get_period("last_week"))
-        current_week = await self.get_period_metrics(*self.__get_period("curr_week"))
+        last_month = await self.get_metrics(*self.get_period("last_month"))
+        current_month = await self.get_metrics(*self.get_period("curr_month"))
+        last_week = await self.get_metrics(*self.get_period("last_week"))
+        current_week = await self.get_metrics(*self.get_period("curr_week"))
 
         # Compute week-over-week and month-over-month deltas.
         last_week_var_average = self.get_past_vs_current(
@@ -143,7 +141,7 @@ class PeriodMetricsService:
             from_last_month_total=from_last_month_total,
         )
 
-        start, end = self.__get_period("curr_month")
+        start, end = self.get_period("curr_month")
         budget_metric = await BudgetMetricsService(
             start_date=start,
             end_date=end,

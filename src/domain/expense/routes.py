@@ -63,14 +63,14 @@ async def metrics(
     current_user: User = Depends(get_current_user),
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
-    year: bool = False,
+    year: bool = True,
 ):
 
     service = PeriodMetricsService(
         session=db, user_id=current_user.uid, start_date=start_date, end_date=end_date
     )
 
-    return await service.execute(with_range=False, last_year=year)
+    return await service.execute(with_range=start_date and end_date, last_year=year)
 
 
 @router.get("/{expense_id}", response_model=ExpenseSchema)
