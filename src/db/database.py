@@ -1,5 +1,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import event
+from datetime import datetime, timezone
 
 from src.config import settings
 
@@ -19,6 +21,15 @@ engine = engine_factory(
     pool_recycle=1800,
     pool_pre_ping=True,
 )
+
+@event.listens_for(engine.sync_engine, 'before_cursor_execute')
+def track_start_time(conn, cursor, statemetn, parameters, context, executemany):
+    context._start_time = datetime.now(tz=timezone.utc)
+
+@event.listens_for(engine.sync_engine, 'after_cursor_execute')
+def track_total_time(conn, cursor, statemetn, parameters, context, executemany):
+    context._time_taken = datetime.now(tz=timezone.utc) - context._start_time
+
 
 # Session
 SessionLocal = async_sessionmaker(

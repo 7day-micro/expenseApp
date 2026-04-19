@@ -11,6 +11,7 @@ from src.auth import routes as auth_routes
 from src.domain.expense import routes as expense_routes
 from src.domain.budget import routes as budget_routes
 from src.domain.category import routes as category_routes
+from dashboard import routes as dashboard_routes
 from src.config import settings
 from src.exceptions import AppException
 import uuid
@@ -75,6 +76,7 @@ app.include_router(auth_routes.router)
 app.include_router(expense_routes.router)
 app.include_router(budget_routes.router)
 app.include_router(category_routes.router)
+app.include_router(dashboard_routes.router)
 
 
 # root to try
