@@ -20,38 +20,6 @@ A_VALID_PASSWORD = "StrongePassWord123#"
 fake = Fk()
 
 
-@pytest_asyncio.fixture
-async def db_session():
-    async with engine_factory(SQLALCHEMY_DATABASE_URL).connect() as connection:
-        # Start outer transaction
-        trans = await connection.begin()
-
-        # Bind session to the connection
-        async with AsyncSession(bind=connection, expire_on_commit=False) as session:
-            # Trap internal 'await db.commit()'
-            await session.begin_nested()
-
-            yield session
-
-            await session.close()
-
-        # Roll back to leave the DB clean for the next function-scoped engine
-        await trans.rollback()
-
-
-@pytest_asyncio.fixture
-async def async_client(db_session):
-    app.dependency_overrides[get_db] = lambda: db_session
-
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        client.headers.update({"Content-Type": "application/json"})
-        yield client
-
-    app.dependency_overrides.clear()
-
-
 @pytest.fixture
 def valid_user():
     return UserCreateSchema(
@@ -370,15 +338,45 @@ async def budget_factory(db_session):
 
 
 @pytest_asyncio.fixture
+async def db_connection():
+    async with engine_factory(SQLALCHEMY_DATABASE_URL).connect() as connection:
+        trans = await connection.begin()
+
+        yield connection
+
+        await trans.rollback()
+
+
+@pytest_asyncio.fixture
+async def db_session(db_connection):
+    async with AsyncSession(
+        bind=db_connection,
+        expire_on_commit=False,
+    ) as session:
+        yield session
+
+
+@pytest_asyncio.fixture
+async def async_client(db_connection):
+    async def override_get_db():
+        async with AsyncSession(
+            bind=db_connection, expire_on_commit=False
+        ) as fresh_session:
+            yield fresh_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        client.headers.update({"Content-Type": "application/json"})
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
 async def authenticated_client(async_client, user, valid_user):
-    """
-    Return an HTTP client whose Authorization header is set to a Bearer token for the provided user.
-
-    This fixture logs in using the given user's credentials and updates the client's default headers with the retrieved access token.
-
-    Returns:
-        The `async_client` instance with its `Authorization` header set to `Bearer <access_token>`.
-    """
     payload = LoginSchema(email=user.email, password=valid_user.password)
     response = await async_client.post(
         "/auth/login",
@@ -394,13 +392,20 @@ async def authenticated_client(async_client, user, valid_user):
 
 
 @pytest_asyncio.fixture
-async def authenticated_client_factory(db_session):
+async def authenticated_client_factory(db_connection):
     clients = []
+
+    async def override_get_db():
+        async with AsyncSession(
+            bind=db_connection, expire_on_commit=False
+        ) as fresh_session:
+            yield fresh_session
 
     async def _factory(user, password=A_VALID_PASSWORD):
         client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
         client.headers.update({"Content-Type": "application/json"})
-        app.dependency_overrides[get_db] = lambda: db_session
+
+        app.dependency_overrides[get_db] = override_get_db
 
         payload = LoginSchema(email=user.email, password=password)
         response = await client.post("/auth/login", data=payload.model_dump_json())
@@ -417,3 +422,5 @@ async def authenticated_client_factory(db_session):
 
     for client in clients:
         await client.aclose()
+
+    app.dependency_overrides.clear()

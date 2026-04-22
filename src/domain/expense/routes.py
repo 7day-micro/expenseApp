@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.oauth2 import get_current_user
@@ -94,11 +95,13 @@ async def update_expense(
     return await service.update(expense_id, payload, current_user.uid)
 
 
-@router.delete("/{expense_id}", response_model=ExpenseSchema)
+@router.delete("/{expense_id}")
 async def delete_expense(
     expense_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     service = ExpenseService(db)
-    return await service.delete(expense_id, current_user.uid)
+    await service.delete(expense_id, current_user.uid)
+
+    return Response(status_code=204)
