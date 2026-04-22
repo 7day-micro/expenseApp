@@ -22,6 +22,15 @@ class BudgetMetricsService:
         start_date: datetime.date,
         end_date: datetime.date,
     ) -> None:
+        """
+        Initialize the BudgetMetricsService with a database session, target user, and analysis date range.
+        
+        Parameters:
+            session (AsyncSession): Asynchronous database session used to execute queries.
+            user_id: Identifier of the user whose budget metrics will be generated.
+            start_date (datetime.date): Start of the reporting period; expected to be the first day of a month.
+            end_date (datetime.date): End of the reporting period; used as the upper bound for query filtering.
+        """
         self.session = session
         self.user_id = user_id
         self.start_date = start_date  # always first day of month
@@ -29,6 +38,19 @@ class BudgetMetricsService:
 
     @property
     def statement(self):
+        """
+        Builds a SQLAlchemy selectable that aggregates expense metrics per budget for the current month window.
+        
+        The selectable returns Budget plus computed columns:
+        - `cat_id`: budget category id
+        - `spent`: sum of Expense.amount for the window
+        - `amount_limit`: Budget.amount_limit
+        - `total_used`: sum of Expense.amount as a percentage of the budget limit
+        - `average`: average Expense.amount
+        
+        Returns:
+            sqlalchemy.sql.Select: A select() that joins Budget to Expense, filters expenses to the current month (bounded by the computed next month first day and `self.end_date`), and groups results by `Budget.id`.
+        """
         today = datetime.datetime.now(tz=datetime.UTC).date()
 
         first_month_day = today.replace(day=1)
@@ -61,7 +83,12 @@ class BudgetMetricsService:
         )
 
     async def execute(self):
-        """Builds current-month budget usage metrics by category."""
+        """
+        Builds budget usage metrics for the relevant month grouped by budget/category.
+        
+        Returns:
+            List[BudgetMetricSchema]: A list of budget metric objects for each returned budget row. Numeric aggregates (`total_used`, `average`, `spent`) are represented on the schema and default to `Decimal(0)` when the query returned NULL.
+        """
 
         rows = await self.session.execute(statement=self.statement)
 
