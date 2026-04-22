@@ -31,7 +31,7 @@ class BudgetService(
         """
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = await category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
 
         data.month_year = data.month_year.replace(day=1)
 
@@ -48,10 +48,9 @@ class BudgetService(
                 details={"user_id": str(user_id), "original_error": str(e)},
             ) from e
 
-        if data.category_id:
-            new_budget.category = category
+        await self.db.refresh(new_budget)
 
-        return new_budget
+        return await self.get_by_id(user_id=user_id, object_id=new_budget.id)
 
     # TODO : -> Make base service accept update schemas
     async def update(
@@ -75,7 +74,7 @@ class BudgetService(
 
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = await category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
 
         for key, value in data.model_dump(
             exclude_unset=True, exclude_none=True
@@ -86,7 +85,6 @@ class BudgetService(
 
         try:
             await self.db.commit()
-            await self.db.refresh(budget)
         except SQLAlchemyError as e:
             await self.db.rollback()
             raise DatabaseException(
@@ -98,11 +96,9 @@ class BudgetService(
                     "original_error": str(e),
                 },
             )
+        await self.db.refresh(budget)
 
-        if data.category_id:
-            budget.category = category
-
-        return budget
+        return await self.get_by_id(user_id=user_id, object_id=budget.id)
 
     async def delete(self, object_id: int, user_id: UUID) -> None:
         """
@@ -135,7 +131,7 @@ class BudgetService(
                 },
             )
 
-    async def get_by_id(self, object_id: int, user_id: UUID) -> Budget | None:
+    async def get_by_id(self, object_id: int, user_id: UUID) -> Budget:
         """
         Retrieve a Budget by its id scoped to a specific user.
 

@@ -37,6 +37,7 @@ class PeriodMetrics(BaseModel):
     # peak_spending: PeakSpendingDay | None = None
     projection: Decimal | None = None
     total_transaction: int = 0
+    budget_metrics: list[BudgetMetricSchema] | None = None
 
 
 class VariationMetrics(BaseModel):

@@ -10,6 +10,11 @@ from src.models import Budget, Expense
 
 
 class BudgetMetricsService:
+    """
+    This class is responsible to generate metrics for budget
+
+    """
+
     def __init__(
         self,
         session: AsyncSession,
@@ -19,23 +24,18 @@ class BudgetMetricsService:
     ) -> None:
         self.session = session
         self.user_id = user_id
-        self.start_date = start_date
+        self.start_date = start_date  # always first day of month
         self.end_date = end_date
 
     @property
     def statement(self):
-        today = datetime.datetime.now(tz=datetime.UTC).replace(
-            hour=0,
-            microsecond=0,
-            minute=0,
-            second=0,
-        )
+        today = datetime.datetime.now(tz=datetime.UTC).date()
 
         first_month_day = today.replace(day=1)
         next_month_first_day = first_month_day + relativedelta.relativedelta(months=1)
         return (
             select(
-                Budget,  # Budget it self
+                Budget,
                 Budget.category_id.label("cat_id"),  # category id
                 func.sum(Expense.amount).label("spent"),  # sum of all expenses
                 Budget.amount_limit,  # Budget target amount
@@ -50,11 +50,12 @@ class BudgetMetricsService:
                     Budget.category_id == Expense.category_id,
                     Budget.month_year <= Expense.transaction_date,
                     Expense.transaction_date < next_month_first_day,
+                    Expense.transaction_date <= self.end_date,
                 ),
             )
             .where(
-                Budget.month_year <= next_month_first_day,
-                Budget.month_year >= first_month_day,
+                Budget.month_year < next_month_first_day,
+                Budget.month_year == first_month_day,
             )
             .group_by(Budget.id)
         )

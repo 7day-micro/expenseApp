@@ -28,7 +28,7 @@ class ExpenseService(
 
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = await category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
 
         expense = Expense(**data.model_dump(exclude={"user_id"}))
         expense.user_id = user_id
@@ -45,10 +45,7 @@ class ExpenseService(
                 details={"user_id": str(user_id), "original_error": str(e)},
             ) from e
 
-        if data.category_id:
-            expense.category = category
-
-        return expense
+        return await self.get_by_id(object_id=expense.id, user_id=user_id)
 
     async def update(
         self, object_id: Any, data: ExpenseUpdateSchema, user_id: UUID

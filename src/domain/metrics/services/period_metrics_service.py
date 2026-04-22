@@ -78,6 +78,13 @@ class PeriodMetricsService:
             self.session, self.user_id, start_date, end_date
         ).execute()
 
+        budgets_metrics = await BudgetMetricsService(
+            user_id=self.user_id,
+            start_date=start_date,
+            end_date=end_date,
+            session=self.session,
+        ).execute()
+
         result = PeriodMetrics(
             daily=days,
             total=grand_total,
@@ -86,6 +93,7 @@ class PeriodMetricsService:
             # peak_spending=peak_spending_day,
             projection=projection,
             total_transaction=total_transaction,
+            budget_metrics=budgets_metrics,
         )
 
         return result

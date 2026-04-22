@@ -55,7 +55,7 @@ async def update_budget(
     return await service.update(budget_id, payload, current_user.uid)
 
 
-@router.delete("/{budget_id}", response_model=BudgetSchema)
+@router.delete("/{budget_id}")
 async def delete_budget(
     budget_id: int,
     db: AsyncSession = Depends(get_db),
