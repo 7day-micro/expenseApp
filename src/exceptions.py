@@ -43,6 +43,12 @@ class EntityNotFoundException(AppException):
         )
 
 
+class InvalidRangeParams(AppException):
+    status_code = 400
+    message = "Selected range is invalid"
+    error_code = "Selected date range is invalid"
+
+
 class DatabaseException(AppException):
     status_code: int = 500
     error_code: str = "database_error"

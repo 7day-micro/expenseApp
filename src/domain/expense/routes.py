@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.exceptions import InvalidRangeParams
 from src.auth.oauth2 import get_current_user
 from src.db.database import get_db
 from src.domain.expense.schemas import (
@@ -45,21 +46,6 @@ async def list_expenses(
     ),  # default is 20 and query param should be > =1 or error raised
     page: int = 1,
 ):
-    """
-    Retrieve a paginated list of the current user's expenses optionally filtered by date range and value.
-    
-    Parameters:
-        date (datetime.date | None): Exact date to filter expenses.
-        start_date (datetime.date | None): Start of the date range (inclusive).
-        end_date (datetime.date | None): End of the date range (inclusive).
-        min_value (Decimal | None): Minimum expense value to include.
-        max_value (Decimal | None): Maximum expense value to include.
-        limit (int): Maximum number of items per page (must be >= 1).
-        page (int): Page number to return (1-indexed).
-    
-    Returns:
-        PaginatedResponseSchema: A paginated collection of expenses matching the provided filters.
-    """
     service = ExpenseService(db)
     return await service.get_all(
         user_id=current_user.uid,
@@ -81,18 +67,20 @@ async def metrics(
     end_date: datetime.date | None = None,
     year: bool = True,
 ):
-
     """
     Compute expense metrics for the authenticated user over an optional date range.
-    
+
     Parameters:
         start_date (datetime.date | None): Inclusive start date of the period to analyze. If not provided, a default period is used.
         end_date (datetime.date | None): Inclusive end date of the period to analyze. If not provided, a default period is used.
         year (bool): When `True`, include comparative metrics for the previous year; when `False`, omit year-over-year comparisons.
-    
+
     Returns:
         MetricsOverview: Aggregated metrics for the user's expenses for the requested period.
     """
+    if any([start_date, end_date]) and not all([start_date, end_date]):
+        return InvalidRangeParams("Selected must pass start_date with end_date")
+
     service = PeriodMetricsService(
         session=db, user_id=current_user.uid, start_date=start_date, end_date=end_date
     )

@@ -88,7 +88,7 @@ class Category(Base):
     )
 
     # updated for ASYNC
-    user: Mapped[User] = relationship(back_populates="categories", lazy="selectin")
+    user: Mapped[User] = relationship(back_populates="categories")
     expenses: Mapped[list[Expense]] = relationship(
         back_populates="category",
     )
