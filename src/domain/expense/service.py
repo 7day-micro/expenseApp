@@ -26,6 +26,20 @@ class ExpenseService(
 ):
     async def create(self, data: ExpenseCreateSchema, user_id: UUID) -> Expense:
 
+        """
+        Create a new Expense for the specified user and return the persisted Expense with its category relationship loaded.
+        
+        Parameters:
+            data (ExpenseCreateSchema): Fields for the new expense; `user_id` from the schema is ignored and replaced by the provided `user_id`.
+            user_id (UUID): UUID of the owner to associate with the created expense.
+        
+        Returns:
+            Expense: The created Expense instance reloaded from the database with its `category` relationship eagerly loaded.
+        
+        Raises:
+            DatabaseException: If a database error occurs while committing the new expense.
+            EntityNotFoundException: If the referenced category (when provided) does not exist for the given `user_id`, or if the created expense cannot be found when reloading.
+        """
         if data.category_id is not None:
             category_service = CategoryService(self.db)
             await category_service.get_by_id(data.category_id, user_id)
@@ -50,6 +64,20 @@ class ExpenseService(
     async def update(
         self, object_id: Any, data: ExpenseUpdateSchema, user_id: UUID
     ) -> Expense:
+        """
+        Update fields of an existing Expense owned by the given user and return the refreshed instance with its category relationship loaded.
+        
+        Parameters:
+            object_id (Any): Identifier of the Expense to update.
+            data (ExpenseUpdateSchema): Partial update values; `category_id` may be explicitly set to `None`.
+            user_id (UUID): Owner's user ID used to scope and validate the Expense and category.
+        
+        Returns:
+            Expense: The updated Expense instance with its `category` relationship eagerly loaded.
+        
+        Raises:
+            DatabaseException: If committing or refreshing the updated Expense fails.
+        """
         expense = await self.get_by_id(object_id, user_id)
 
         # Since exclude_none will ignore all fields
@@ -138,6 +166,22 @@ class ExpenseService(
         min_value: Decimal | None = None,
         max_value: Decimal | None = None,
     ) -> PaginatedResponseSchema:
+        """
+        Retrieve a paginated list of expenses for a given user, optionally filtered by exact date, date range, and amount bounds.
+        
+        Parameters:
+            user_id (UUID): Owner of the expenses to retrieve.
+            page (int): 1-based page number; values less than 1 are treated as 1.
+            limit (int): Maximum items per page; values above 50 are capped to 50.
+            date_filter (datetime.date | None): If provided, include only expenses whose transaction_date equals this date.
+            start_date (datetime.date | None): If provided and `date_filter` is None, include expenses with transaction_date on or after this date.
+            end_date (datetime.date | None): If provided and `date_filter` is None, include expenses with transaction_date on or before this date.
+            min_value (Decimal | None): If provided, include expenses with amount greater than or equal to max(0, min_value).
+            max_value (Decimal | None): If provided, include expenses with amount less than or equal to max(0, max_value).
+        
+        Returns:
+            PaginatedResponseSchema: Contains `data`, a list of Expense instances (each with its `category` eagerly loaded), and `meta` with pagination info (`total`, `count`, `page`, `total_pages`).
+        """
         statement = (
             select(Expense)
             .options(selectinload(Expense.category))

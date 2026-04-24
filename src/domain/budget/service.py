@@ -20,14 +20,18 @@ class BudgetService(
 ):  # fixed
     async def create(self, data: BudgetCreateSchema, user_id: UUID) -> Budget:
         """
-        Create a new Budget from the provided creation schema and persist it to the database.
-
+        Create a Budget for the given user and persist it to the database.
+        
         Parameters:
-            data (BudgetCreateSchema): Schema containing fields for the new Budget.
-            user_id (UUID): Identifier of the user who owns the Budget.
-
+            data (BudgetCreateSchema): Creation data for the new budget. If `category_id` is present, the category is validated for the given user.
+            user_id (UUID): Identifier of the user who will own the created budget.
+        
         Returns:
-            Budget: The persisted Budget instance.
+            Budget: The created Budget instance as persisted and reloaded from the database.
+        
+        Raises:
+            DatabaseException: If a database error occurs during commit.
+            EntityNotFoundException: If a referenced category does not exist for the user.
         """
         if data.category_id is not None:
             category_service = CategoryService(self.db)
@@ -57,18 +61,19 @@ class BudgetService(
         self, object_id: int, data: BudgetUpdateSchema, user_id: UUID
     ) -> Budget | None:
         """
-        Update the specified Budget with values provided in the update schema.
-
+        Update the specified Budget with the fields provided in the update schema for the given user.
+        
         Parameters:
             object_id (int): ID of the Budget to update.
             data (BudgetUpdateSchema): Partial update data; only explicitly set fields are applied.
-            user_id (UUID): ID of the owner to scope the lookup.
-
+            user_id (UUID): ID of the owner used to scope the lookup.
+        
         Returns:
-            Budget: The updated Budget instance.
-
+            Budget: The updated Budget instance reloaded from the database.
+        
         Raises:
-            EntityNotFoundException: If no Budget with the given id exists for the specified user or invalid category_id is provided in the attached data.
+            EntityNotFoundException: If no Budget with the given id exists for the specified user or if `data.category_id` references a non-existent category for the user.
+            DatabaseException: If a database error occurs while committing the update.
         """
         budget = await self.get_by_id(object_id=object_id, user_id=user_id)
 
@@ -102,17 +107,11 @@ class BudgetService(
 
     async def delete(self, object_id: int, user_id: UUID) -> None:
         """
-        Delete a Budget belonging to the specified user.
-
-        Parameters:
-            object_id (int): ID of the Budget to delete.
-            user_id (UUID): ID of the user who owns the Budget.
-
-        Returns:
-            Budget: The deleted Budget instance.
-
+        Delete the budget identified by `object_id` for the specified `user_id`.
+        
         Raises:
             EntityNotFoundException: If no Budget with the given `object_id` exists for `user_id`.
+            DatabaseException: If a database error occurs while deleting or committing; includes operation, entity name, object_id, user_id, and original error details.
         """
         result = await self.get_by_id(object_id=object_id, user_id=user_id)
 
