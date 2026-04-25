@@ -1,0 +1,150 @@
+# Post-Mortem: The Saga of Lazy Loading, MissingGreenlet, and Lying Tests
+
+## How it all started
+
+We got together in a small group to collaborate on building a financial tracking app. The initial team had about 6 developers. We divided the tasks, collaborated heavily, and at a certain point, we had the application's *core* fully functional.
+
+Like any good app in this niche, it needed charts showing user metrics: average daily spend, highest spending day, most expensive category, etc. I volunteered to take ownership of this feature.
+
+The logic was simple: date-based aggregation operations are easy and lightweight for a relational database to execute, even with thousands of records.
+
+**Step 1: The Seeder**
+To test the system, I developed a *seeder* to populate the database with a few users, generating 400 *Expenses* for each one. 
+
+**Step 2: The Metrics Generator**
+I created the service to process the data and defined complex Pydantic *schemas* that returned everything from daily averages to spending projections. In the end, the metrics were there and working perfectly.
+
+---
+
+## The First Problem: "It Shouldn't Be Like This"
+
+In one of my college classes, I remember hearing that we should build software that scales as efficiently as possible, right? Right.
+
+With that in mind, I wanted to see how the system behaved under stress. I added about **100k Expenses** for a single user. I made a request to the metrics endpoint and... **VOILÀ -> 2.6 seconds.**
+
+Not bad, right? 
+**No. That's terrible.**
+
+It shouldn't take 2.6 seconds. Aggregation operations are lightweight and the data was highly indexed. I went a bit further and added **800k Expenses** for 1 single user. 
+
+**BOOM:** The system took **30 seconds** to generate the metrics. **Unacceptable.**
+
+I thought: *"Maybe I should run this task in the background using Celery/Redis"*. But competitor apps generate metrics live, instantly. I refused to accept this limitation.
+
+### The Clue and the Main Culprit
+During manual testing, I noticed that the **Login** endpoint (which has nothing to do with metrics) was taking 1 second to respond locally. This led me to the real culprit: **Exponential Lazy Loading**.
+
+I discovered that all relationships between the SQLAlchemy *models* contained a seemingly harmless attribute: `lazy="selectin"`.
+
+This attribute tells SQLAlchemy how to handle relationships when loading an object. Using `lazy="selectin"` bidirectionally means that when you load 1 User, you bring all their Expenses. And when you load 1 Expense, you bring its User. 
+
+The math of the disaster worked like this:
+Imagine the service wants to group only the **1,000 expenses of the current month** for the chart. The database filters this in milliseconds. But then, the cascade begins:
+
+1. **The Trigger:** SQLAlchemy loads the 1,000 expenses and notices they have a `User`. It instantiates the User.
+2. **The Rebound:** The `User` has `lazy="selectin"` for its `Expenses`. SQLAlchemy goes to the database and pulls **all 800 thousand expenses from that user's lifetime**.
+3. **The Catch (The ORM Tax):** But wait: a Python loop iterating 800 thousand times would run in fractions of a second. How did this turn into 30 seconds? 
+It turns out a SQLAlchemy object is a heavy monster. For each of these 800 thousand instances, it needs to build metadata, attach event listeners, and inject an internal transaction tracking state. Multiply this meticulous CPU and RAM cost by hundreds of thousands of objects created all at once. The CPU was absolutely crushed by the weight of building the ORM's infrastructure.
+
+### Solution Part 1: Nipping it in the bud
+
+We cannot delegate to the ORM the task of guessing what to fetch. I communicated to the team: `lazy="selectin"` would be removed from everything. The endpoints should use explicit loading (like `.options(selectinload(...))`).
+
+**BINGO.**
+By removing the `selectin`:
+* The Login endpoint unblocked, returning to the normal 200ms.
+* The metric for 800k records dropped from 30 long seconds to **an absurd 150ms**.
+
+Problem solved! Next.
+
+---
+
+## The New Problem: Welcome, `MissingGreenlet`
+
+Without automatic loading, SQLAlchemy no longer fetches relationships magically.
+
+The problem was that we were using **async sessions**. The request lifecycle worked like this: the Route creates the session -> The Service executes the *query* -> The Session is CLOSED -> The object goes to Pydantic to be serialized.
+
+If we forgot to load the *Category* relationship in the *query*, Pydantic would try to access it synchronously with the session already dead. 
+The result? **BOOM. Error 500: MissingGreenlet.**
+
+I explicitly adjusted the *queries* in all routes. I ran the test suite. **100% passed.**
+I opened the PR, the code was reviewed and approved. I went to grab a coffee.
+
+---
+
+## The Illusion: When Tests Lie
+
+Right after the *merge*, Bright (our Front-End dev) reported: *"I'm getting a 500 error when trying to create data via the API. MissingGreenlet"*.
+
+How so? The tests passed 100%!
+
+I opened my API Client, fired the creation request and: **Status 500**.
+I ran the tests on my machine again: **100% Passing**.
+I looked at the database: The data was saving perfectly. The error only happened when returning the JSON.
+
+### The Big Problem with Async Tests
+
+SQLAlchemy has an internal memory called the **Identity Map**. 
+The setup I had built used a *Global Fixture* for the database in the tests. This *fixture* opened a session at the beginning of the test, created mock data (placing it into the Identity Map), and passed this **exact same session** to the tested Route.
+
+When Pydantic asked for the Expense's Category, SQLAlchemy would say: *"Whoops, the session is still open and I already have this Category right here in my Identity Map!"*. Pydantic serialized it, and the test passed brilliantly.
+
+**In Production, the reality was different:** The Route opened and closed its own session. The Identity Map was destroyed. Pydantic tried to act and got the error right in the face.
+
+Our tests were masking the problem because they kept the *Identity Map* artificially alive!
+
+---
+
+## The Climax: The `expire_on_commit` War
+
+I thought: *"Easy. I'll force the test session to expire objects after a commit by passing `expire_on_commit=True`"*. 
+
+To give some technical context: this parameter tells SQLAlchemy that, after a `commit()`, all live objects in the *Identity Map* must be marked as "expired". If you try to access an attribute of an expired object, the ORM will try to fire a new *query* (a `SELECT`) to the database under the hood to refresh the data.
+
+I changed it to `True`, expecting the test to finally simulate production. I ran it.
+**ALL THE APPLICATION'S TESTS BROKE.**
+
+But they didn't break by masking the Route's error. They broke inside the test file itself with a beautiful `DetachedInstanceError` (and more `MissingGreenlet`s).
+
+**What happened technically?**
+To keep the code clean, we used *fixtures* that prepared the database. Example: a *fixture* creates a real Category in the DB and returns the object to you (`category_fixture`). In the test body, we fire the API request and, at the end, validate the result:
+
+```python
+assert response_expense.category_id == category_fixture.id
+```
+
+Here was the trap: since the Route (which shared the test's session) made a `commit()` to save the new Expense, `expire_on_commit=True` acted like a bulldozer. It invalidated **everything** in the session's memory, including our `category_fixture`!
+
+Upon reaching the `assert` line, Python tried to read `category_fixture.id`. SQLAlchemy said: *"Whoops, this object expired! Let me go to the DB to fetch it."* But accessing a class attribute in Python is a **synchronous** operation, and going to the database with Async SQLAlchemy requires an `await`. The result is an immediate crash.
+
+I was at a dead end: I couldn't remove the commit from the Route, but sharing the session made the test either lie to my face (using `False`) or implode the entire test suite (using `True`).
+
+---
+
+## The Ultimate Solution: Parting the Waters
+
+That's when the test architecture changed. It clicked: we can't use the same database "pipeline" to prepare mock data and to simulate the user's request.
+
+The definitive solution was to separate the contexts:
+1. **Fixtures Session:** Became strictly dedicated to preparing *mock* data, keeping the objects alive for final validations.
+2. **Application Session (`ApiClient`):** The *fixture* sending HTTP requests to the API started using an **internal and independent session**, injected via dependency override in FastAPI.
+
+In practice, we changed the test client factory to override the database dependency, delivering a "fresh" and exclusive session.
+
+**The Result:**
+Now, the request flow gets a virgin session. The Route does what it needs to do, commits to the database, and the session dies (along with its *Identity Map*). 
+
+If we forget the explicit loading (`selectinload`) in the application code, when Pydantic comes onto the scene in the test, it catches the error and the `MissingGreenlet` explodes on our screen. Total protection! But, if the code is correct, the test receives the validated JSON and uses our Fixtures Session—which stayed quiet, with intact objects—to run the final `asserts`.
+
+### The Aftermath and the Lesson Learned
+
+At the end of the day, the metrics feature was deployed to the application, running smoothly and instantly. There were no massive fireworks in the team—partly because the workflow was calm those days—but my personal satisfaction in seeing an architecture bulletproofed against false positives was enormous.
+
+This whole saga left me with a fundamental lesson in software engineering: **"magic" tools must be controlled.**
+
+ORMs like SQLAlchemy are brilliant, but when you allow the tool to make implicit decisions about scaling and data loading, it will hide the complexity from you. And the price for that is high: whether it's silently frying your CPU in production, or blatantly lying to your face inside a "green" test suite.
+
+Own your code. Control the magic.
+
+***
