@@ -1,20 +1,22 @@
-from datetime import date
+import datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.exceptions import InvalidRangeParams
 from src.auth.oauth2 import get_current_user
 from src.db.database import get_db
 from src.domain.expense.schemas import (
     ExpenseCreateSchema,
     ExpenseSchema,
     ExpenseUpdateSchema,
-    MetricsOverview,
     PaginatedResponseSchema,
 )
-from src.domain.expense.service import ExpenseMetricGenerator, ExpenseService
+from src.domain.expense.service import ExpenseService
+from src.domain.metrics.schemas import MetricsOverview
+from src.domain.metrics.services.period_metrics_service import PeriodMetricsService
 from src.models import User
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -34,9 +36,9 @@ async def create_expense(
 async def list_expenses(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    date: date | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
+    date: datetime.date | None = None,
+    start_date: datetime.date | None = None,
+    end_date: datetime.date | None = None,
     min_value: Decimal | None = None,
     max_value: Decimal | None = None,
     limit: int = Query(
@@ -61,10 +63,29 @@ async def list_expenses(
 async def metrics(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    start_date: datetime.date | None = None,
+    end_date: datetime.date | None = None,
+    year: bool = True,
 ):
-    service = ExpenseMetricGenerator(db, current_user.uid)
+    """
+    Compute expense metrics for the authenticated user over an optional date range.
 
-    return await service.run()
+    Parameters:
+        start_date (datetime.date | None): Inclusive start date of the period to analyze. If not provided, a default period is used.
+        end_date (datetime.date | None): Inclusive end date of the period to analyze. If not provided, a default period is used.
+        year (bool): When `True`, include comparative metrics for the previous year; when `False`, omit year-over-year comparisons.
+
+    Returns:
+        MetricsOverview: Aggregated metrics for the user's expenses for the requested period.
+    """
+    if any([start_date, end_date]) and not all([start_date, end_date]):
+        return InvalidRangeParams("Selected must pass start_date with end_date")
+
+    service = PeriodMetricsService(
+        session=db, user_id=current_user.uid, start_date=start_date, end_date=end_date
+    )
+
+    return await service.execute(with_range=start_date and end_date, last_year=year)
 
 
 @router.get("/{expense_id}", response_model=ExpenseSchema)

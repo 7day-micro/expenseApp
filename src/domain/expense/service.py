@@ -1,35 +1,24 @@
 import datetime
 from decimal import Decimal
 from math import ceil
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.common.base_service import BaseService
-from src.domain.category.schemas import CategorySchema
 from src.domain.category.service import CategoryService
 from src.domain.expense.schemas import (
-    BudgetMetricSchema,
-    CategoryMetricSchema,
-    DailyMetrics,
     ExpenseCreateSchema,
     ExpenseSchema,
     ExpenseUpdateSchema,
     MetaSchema,
-    MetricsOverview,
     PaginatedResponseSchema,
-    PeakSpendingDay,
-    PeriodMetrics,
-    VariationMetrics,
 )
 from src.exceptions import DatabaseException, EntityNotFoundException
-from src.models import Budget, Category, Expense
-
-PERIOD_TIME = Literal["curr_week", "curr_month", "last_week", "last_month"]
+from src.models import Expense
 
 
 class ExpenseService(
@@ -37,9 +26,23 @@ class ExpenseService(
 ):
     async def create(self, data: ExpenseCreateSchema, user_id: UUID) -> Expense:
 
+        """
+        Create a new Expense for the specified user and return the persisted Expense with its category relationship loaded.
+        
+        Parameters:
+            data (ExpenseCreateSchema): Fields for the new expense; `user_id` from the schema is ignored and replaced by the provided `user_id`.
+            user_id (UUID): UUID of the owner to associate with the created expense.
+        
+        Returns:
+            Expense: The created Expense instance reloaded from the database with its `category` relationship eagerly loaded.
+        
+        Raises:
+            DatabaseException: If a database error occurs while committing the new expense.
+            EntityNotFoundException: If the referenced category (when provided) does not exist for the given `user_id`, or if the created expense cannot be found when reloading.
+        """
         if data.category_id is not None:
             category_service = CategoryService(self.db)
-            category = await category_service.get_by_id(data.category_id, user_id)
+            await category_service.get_by_id(data.category_id, user_id)
 
         expense = Expense(**data.model_dump(exclude={"user_id"}))
         expense.user_id = user_id
@@ -56,14 +59,25 @@ class ExpenseService(
                 details={"user_id": str(user_id), "original_error": str(e)},
             ) from e
 
-        if data.category_id:
-            expense.category = category
-
-        return expense
+        return await self.get_by_id(object_id=expense.id, user_id=user_id)
 
     async def update(
         self, object_id: Any, data: ExpenseUpdateSchema, user_id: UUID
     ) -> Expense:
+        """
+        Update fields of an existing Expense owned by the given user and return the refreshed instance with its category relationship loaded.
+        
+        Parameters:
+            object_id (Any): Identifier of the Expense to update.
+            data (ExpenseUpdateSchema): Partial update values; `category_id` may be explicitly set to `None`.
+            user_id (UUID): Owner's user ID used to scope and validate the Expense and category.
+        
+        Returns:
+            Expense: The updated Expense instance with its `category` relationship eagerly loaded.
+        
+        Raises:
+            DatabaseException: If committing or refreshing the updated Expense fails.
+        """
         expense = await self.get_by_id(object_id, user_id)
 
         # Since exclude_none will ignore all fields
@@ -152,6 +166,22 @@ class ExpenseService(
         min_value: Decimal | None = None,
         max_value: Decimal | None = None,
     ) -> PaginatedResponseSchema:
+        """
+        Retrieve a paginated list of expenses for a given user, optionally filtered by exact date, date range, and amount bounds.
+        
+        Parameters:
+            user_id (UUID): Owner of the expenses to retrieve.
+            page (int): 1-based page number; values less than 1 are treated as 1.
+            limit (int): Maximum items per page; values above 50 are capped to 50.
+            date_filter (datetime.date | None): If provided, include only expenses whose transaction_date equals this date.
+            start_date (datetime.date | None): If provided and `date_filter` is None, include expenses with transaction_date on or after this date.
+            end_date (datetime.date | None): If provided and `date_filter` is None, include expenses with transaction_date on or before this date.
+            min_value (Decimal | None): If provided, include expenses with amount greater than or equal to max(0, min_value).
+            max_value (Decimal | None): If provided, include expenses with amount less than or equal to max(0, max_value).
+        
+        Returns:
+            PaginatedResponseSchema: Contains `data`, a list of Expense instances (each with its `category` eagerly loaded), and `meta` with pagination info (`total`, `count`, `page`, `total_pages`).
+        """
         statement = (
             select(Expense)
             .options(selectinload(Expense.category))
@@ -206,343 +236,3 @@ class ExpenseService(
             total_pages=ceil(total_count / safe_limit),
         )
         return PaginatedResponseSchema(data=result_list, meta=meta)
-
-
-class ExpenseMetricGenerator:
-    """Builds aggregated expense metrics for dashboard views."""
-
-    def __init__(self, db: AsyncSession, user_id: UUID):
-        self.db = db
-        self.uid = user_id
-
-    @property
-    def last_month_range_statement(self):
-        """SQL filter for the full previous month."""
-        today = datetime.datetime.now(tz=datetime.UTC).replace(
-            hour=0,
-            microsecond=0,
-            minute=0,
-            second=0,
-        )
-
-        current_month_first_day = today.replace(day=1).replace(
-            hour=0,
-            microsecond=0,
-            minute=0,
-            second=0,
-        )
-        passed_month_last_day = current_month_first_day - datetime.timedelta(days=1)
-        passed_month_first_day = passed_month_last_day.replace(day=1)
-
-        return and_(
-            Expense.transaction_date >= passed_month_first_day,
-            Expense.transaction_date < current_month_first_day,
-        )
-
-    @property
-    def current_month_range_statement(self):
-        """SQL filter from current month start until today (inclusive)."""
-        today = datetime.datetime.now(tz=datetime.UTC).replace(
-            hour=0,
-            microsecond=0,
-            minute=0,
-            second=0,
-        )
-        tomorrow = today + datetime.timedelta(days=1)
-
-        current_month_first_day = today.replace(day=1)
-
-        return and_(
-            Expense.transaction_date >= current_month_first_day,
-            Expense.transaction_date < tomorrow,
-        )
-
-    @property
-    def last_week_range_statement(self):
-        """SQL filter for the previous ISO week (Mon-Sun window)."""
-        today = datetime.datetime.now(tz=datetime.UTC).replace(
-            hour=0,
-            microsecond=0,
-            minute=0,
-            second=0,
-        )
-        today_weekday = today.isoweekday()
-
-        current_week_first_day = today - datetime.timedelta(days=today_weekday - 1)
-        passed_week_first_day = current_week_first_day - datetime.timedelta(days=7)
-
-        return and_(
-            Expense.transaction_date >= passed_week_first_day,
-            Expense.transaction_date < current_week_first_day,
-        )
-
-    @property
-    def current_week_range_statement(self):
-        """SQL filter from current ISO week start until today (inclusive)."""
-        today = datetime.datetime.now(tz=datetime.UTC).replace(
-            hour=0,
-            microsecond=0,
-            minute=0,
-            second=0,
-        )
-        tomorrow = today + datetime.timedelta(days=1)
-
-        today_weekday = today.isoweekday()
-
-        current_week_first_day = today - datetime.timedelta(days=today_weekday - 1)
-
-        return and_(
-            Expense.transaction_date >= current_week_first_day,
-            Expense.transaction_date < tomorrow,
-        )
-
-    def get_statement(self, range_statement):
-        """Daily aggregation query for a given period."""
-        return (
-            select(
-                func.sum(Expense.amount).label("total"),
-                func.count("*").label("count_"),
-                func.sum(func.sum(Expense.amount)).over().label("grand_total"),
-                func.sum(func.count("*")).over().label("total_transactions"),
-                func.date(Expense.transaction_date).label("day"),
-            )
-            .where(Expense.user_id == self.uid, range_statement)
-            .group_by(func.date(Expense.transaction_date))
-            .order_by(func.date(Expense.transaction_date))
-        )
-
-    @staticmethod
-    def get_percentage_of_total(total: Decimal, part: Decimal):
-        """Returns percentage contribution rounded to 2 decimal places."""
-        return Decimal((part / max(1, total)) * 100).quantize(Decimal("0.00"))
-
-    async def get_period_metrics(self, period: PERIOD_TIME):
-        """Computes dashboard metrics for a single period label."""
-
-        # Resolve period filter and number of elapsed days for average calculations.
-        today = datetime.datetime.now(tz=datetime.UTC).replace(
-            hour=0,
-            microsecond=0,
-            minute=0,
-            second=0,
-        )
-        time_range_stmt = ""
-        num_days = 0
-        match period:
-            case "curr_month":
-                time_range_stmt = self.current_month_range_statement
-                num_days = today.day
-            case "curr_week":
-                time_range_stmt = self.current_week_range_statement
-                num_days = today.isoweekday()
-            case "last_month":
-                time_range_stmt = self.last_month_range_statement
-                num_days = (today.replace(day=1) - datetime.timedelta(days=1)).day
-            case "last_week":
-                time_range_stmt = self.last_week_range_statement
-                num_days = 7
-            case _:
-                raise ValueError("metrics need a period")
-
-        # Execute daily aggregation rows for the selected period.
-        stmt = self.get_statement(time_range_stmt)
-        result = await self.db.execute(statement=stmt)
-
-        # Materialize the result set for downstream transformations.
-        rows = result.all()
-
-        # Total amount for the period; defaults to 0 when there are no rows.
-        grand_total = rows[0].grand_total if rows else Decimal(0)
-
-        # Build a day-indexed map only for days with transactions.
-        days = {
-            row.day: DailyMetrics(total=row.total, count=row.count_) for row in rows
-        }
-
-        # Average uses elapsed days, so days with no transactions are included.
-        average_daily_spending = Decimal(grand_total / max(1, num_days)).quantize(
-            Decimal("0.00")
-        )
-
-        # Keep transaction count aligned with the aggregate row payload.
-        total_transaction = rows[0].total_transactions if grand_total else 0
-
-        category_metrics = await self.get_category_metrics(
-            time_range_stmt=time_range_stmt
-        )
-
-        peak_day = max(days.items(), key=lambda x: x[1].total) if days else None
-
-        peak_spending_day = (
-            PeakSpendingDay(
-                count=peak_day[1].count, date=peak_day[0], total=peak_day[1].total
-            )
-            if peak_day
-            else None
-        )
-
-        days_for_projection = 0
-        match period:
-            case "curr_month":
-                # Project current pace over the full month length.
-                first_day_next_month = (today + datetime.timedelta(days=32)).replace(
-                    day=1
-                )
-                curr_month_day_count = (
-                    first_day_next_month - datetime.timedelta(days=1)
-                ).day
-                days_for_projection = curr_month_day_count
-            case "curr_week":
-                # Project current pace over a full week.
-                days_for_projection = 7
-
-        projection = average_daily_spending * days_for_projection
-
-        return PeriodMetrics(
-            daily=days,
-            total=grand_total,
-            average_daily=average_daily_spending,
-            category_metrics=category_metrics,
-            peak_spending=peak_spending_day,
-            projection=projection,
-            total_transaction=total_transaction,
-        )
-
-    @staticmethod
-    def get_past_vs_current(before: Decimal, current: Decimal):
-        """Percentage delta from a previous value to current value."""
-        if before is None or current is None:
-            raise ValueError("cant")
-        return ((current - before) / (before if before != 0 else 1)) * 100
-
-    async def get_category_metrics(self, time_range_stmt) -> list[CategoryMetricSchema]:
-        """Breaks period spend down by category with percentage share."""
-        grand_total_st = (
-            select(func.sum(Expense.amount))
-            .where(time_range_stmt, Expense.user_id == self.uid)
-            .scalar_subquery()
-        )
-
-        statement = (
-            select(
-                Category.name.label("cat_name"),
-                func.sum(Expense.amount).label("total"),
-                func.count(Expense.amount).label("transaction_count"),
-                grand_total_st.label("grand_total"),
-                Category,
-            )
-            .join(Category, Expense.category_id == Category.id)
-            .where(
-                Expense.user_id == self.uid,
-                Expense.category_id.isnot(None),
-                time_range_stmt,
-            )
-            .group_by(Category.id)
-        )
-
-        result = await self.db.execute(statement=statement)
-
-        rows = result.all()
-
-        return [
-            CategoryMetricSchema(
-                total=row.total,
-                transaction_count=row.transaction_count,
-                category=CategorySchema.model_validate(row.Category),
-                percentage_of_total=ExpenseMetricGenerator.get_percentage_of_total(
-                    row.grand_total, row.total
-                ),
-            )
-            for row in rows
-        ]
-
-    async def get_budgte_metrics(self):
-        """Builds current-month budget usage metrics by category."""
-
-        today = datetime.datetime.now(tz=datetime.UTC).replace(
-            hour=0,
-            microsecond=0,
-            minute=0,
-            second=0,
-        )
-
-        first_month_day = today.replace(day=1)
-        next_month_first_day = (today + datetime.timedelta(days=32)).replace(day=1)
-
-        statement = (
-            select(
-                Budget,  # Budget it self
-                Budget.category_id.label("cat_id"),  # category id
-                func.sum(Expense.amount).label("spent"),  # sum of all expenses
-                Budget.amount_limit,  # Budget target amount
-                (func.sum(Expense.amount / Budget.amount_limit * 100)).label(
-                    "total_used"
-                ),  # total of use in percentage of all expenses agaisnt the amount limit
-                (func.avg(Expense.amount)).label("average"),  # Average amount of spends
-            )
-            .join(
-                Expense,
-                and_(
-                    Budget.category_id == Expense.category_id,
-                    Budget.month_year <= Expense.transaction_date,
-                    Expense.transaction_date < next_month_first_day,
-                ),
-            )
-            .where(
-                Budget.month_year <= next_month_first_day,
-                Budget.month_year >= first_month_day,
-            )
-            .group_by(Budget.id)
-        )
-
-        rows = await self.db.execute(statement=statement)
-
-        return [
-            BudgetMetricSchema(
-                budget=row.Budget,
-                limit=row.amount_limit,
-                percentage_used=row.total_used or Decimal(0),
-                spending_average=row.average or Decimal(0),
-                spent=row.spent or Decimal(0),
-            )
-            for row in rows
-        ]
-
-    async def run(self):
-        """Generates the complete metrics overview payload."""
-        last_month = await self.get_period_metrics("last_month")
-        current_month = await self.get_period_metrics("curr_month")
-        last_week = await self.get_period_metrics("last_week")
-        current_week = await self.get_period_metrics("curr_week")
-        # Compute week-over-week and month-over-month deltas.
-        last_week_var_average = ExpenseMetricGenerator.get_past_vs_current(
-            last_week.average_daily,
-            current_week.average_daily,
-        )
-        from_last_week_total = ExpenseMetricGenerator.get_past_vs_current(
-            last_week.total,
-            current_week.total,
-        )
-        from_last_month_daily = ExpenseMetricGenerator.get_past_vs_current(
-            last_month.average_daily,
-            current_month.average_daily,
-        )
-        from_last_month_total = ExpenseMetricGenerator.get_past_vs_current(
-            last_month.total,
-            current_month.total,
-        )
-        variations = VariationMetrics(
-            from_last_week_daily=last_week_var_average,
-            from_last_week_total=from_last_week_total,
-            from_last_month_daily=from_last_month_daily,
-            from_last_month_total=from_last_month_total,
-        )
-        budget_metric = await self.get_budgte_metrics()
-        return MetricsOverview(
-            current_month=current_month,
-            last_month=last_month,
-            current_week=current_week,
-            last_week=last_week,
-            variation=variations,
-            budgets_metrics=budget_metric,
-        )

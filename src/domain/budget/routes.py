@@ -51,16 +51,35 @@ async def update_budget(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    Update an existing budget owned by the authenticated user.
+    
+    Parameters:
+        budget_id (int): ID of the budget to update.
+        payload (BudgetUpdateSchema): Fields to update on the budget.
+    
+    Returns:
+        BudgetSchema: The updated budget.
+    """
     service = BudgetService(db)
     return await service.update(budget_id, payload, current_user.uid)
 
 
-@router.delete("/{budget_id}", response_model=BudgetSchema)
+@router.delete("/{budget_id}")
 async def delete_budget(
     budget_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    Delete a budget belonging to the authenticated user.
+    
+    Parameters:
+        budget_id (int): ID of the budget to delete.
+    
+    Returns:
+        Response: HTTP 204 No Content response.
+    """
     service = BudgetService(db)
     await service.delete(budget_id, current_user.uid)
     return Response(status_code=204)
